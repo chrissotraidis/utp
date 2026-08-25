@@ -19,6 +19,7 @@ Status: **PASS for the bounded Simulator session; G8 remains PARTIAL pending phy
 - The live screenshots show the death/scoreboard state, a successful return to first-person play with weapon and HUD, and the full-resolution post-respawn state.
 - The final disconnect used the stock Unreal menu route—Escape, Multiplayer, Disconnect from Server—not a host replacement or console-travel approximation. The original engine then recorded `Browse: Index.unr?failed`, `Failed; returning to Entry`, and possession of the Entry pawn. The final smoke log verified that exact sequence and reached `complete`.
 - A separate uninterrupted run on the same endpoint captured a real server match transition from `DM-Zeto` to `DM-Pressure`: new package negotiation and `WELCOME`, connection turnover, map bring-up, and possession of the new map pawn.
+- After the final stable-source rebuild, a fresh regression joined `DM-Barricade`, repeated every bounded input phase, and verified the original stock-menu disconnect back to Entry. `make test`, the real-FMOD Simulator package, and the real-FMOD iPhoneOS package all passed immediately before this run.
 
 ## Deliberately not promoted
 
@@ -36,6 +37,9 @@ Status: **PASS for the bounded Simulator session; G8 remains PARTIAL pending phy
 - `02-respawn-live-play.png` — manual FIRE respawn to live first-person play.
 - `12-post-respawn.png` — native-resolution automated post-respawn first-person state.
 - `14-final-disconnect.png` — native-resolution Entry/title state after stock-menu disconnect.
+- `15-final-regression-entry.png` — native-resolution final-package Entry/title state after the `DM-Barricade` stock-menu disconnect.
+- `final-regression-network-session-smoke.log` — final-package bounded sequence ending in verified stock-menu disconnect and `complete`.
+- `final-regression-engine.stdout` — final-package engine log containing welcome, possession, and clean return to Entry.
 
 Selected SHA-256 values:
 
@@ -51,4 +55,10 @@ b73f802979cbedc0ca674949acda645a333bba642b16fa374d0b70ee5d42184c  map-transition
 0206263e79ca78a3d1231fa2ea41fcc147a7c7e01ffa46d2d15bb09b2604f1e6  Simulator UnrealTournament.dylib
 95a7bd037acc8d6473cbc3958007a8c31b83b0b7ab9b09a105ee239058b6154a  iPhoneOS UT99Apple executable
 ee4e01192ce4caf935d3d9315059eee956bbdcf27016f7f09a1933cd5ca9eaeb  iPhoneOS UnrealTournament.dylib
+a92e8a731f1455d868890d7e2484c85a8869cce8d5b0adc450a3c7c1d9046c6c  15-final-regression-entry.png
+b6e4eb440f8557140c8926b9ace4ded73ef6086cdd81c3a5ef12019e882b412a  final-regression-network-session-smoke.log
+400e00943a39b117f3ce99333119394946d58d46b0b9438259e4ef245537c85e  Final Simulator UT99Apple executable
+0206263e79ca78a3d1231fa2ea41fcc147a7c7e01ffa46d2d15bb09b2604f1e6  Final Simulator UnrealTournament.dylib
+556e5c65f24baf3056b1216da72933b9975187c6ac0a7eeb9e5779e9f41755b9  Final iPhoneOS UT99Apple executable
+ee4e01192ce4caf935d3d9315059eee956bbdcf27016f7f09a1933cd5ca9eaeb  Final iPhoneOS UnrealTournament.dylib
 ```
