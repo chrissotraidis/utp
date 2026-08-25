@@ -1,6 +1,6 @@
 # Rights and licensing boundary
 
-UT99Apple currently has no top-level license grant. Unless an individual file
+UTP currently has no top-level license grant. Unless an individual file
 says otherwise, public access to project-owned integration code, scripts,
 documentation, tests, and original patch content does not grant permission to
 copy, modify, redistribute, sublicense, or sell it.
@@ -24,5 +24,5 @@ implemented game-data acquisition flow in a public binary remain subject to
 written permission and the selected Apple distribution channel. A technically
 working local build is not evidence of distribution rights.
 
-UT99Apple is an independent, unofficial preservation and engineering project.
+UTP is an independent, unofficial preservation and engineering project.
 It is not affiliated with or endorsed by Epic Games, OldUnreal, or Apple.

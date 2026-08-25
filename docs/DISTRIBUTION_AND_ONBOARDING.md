@@ -2,7 +2,7 @@
 
 ## Current decision
 
-UT99Apple is ready to move from Simulator validation to signed physical-device testing. Public distribution is not yet authorized merely because a diagnostic IPA can be produced. The app binary and the game-data acquisition flow have separate permissions and Apple-platform requirements, so they remain separate release artifacts.
+UTP is ready to move from Simulator validation to signed physical-device testing. Public distribution is not yet authorized merely because a diagnostic IPA can be produced. The app binary and the game-data acquisition flow have separate permissions and Apple-platform requirements, so they remain separate release artifacts.
 
 Online play is a launch-critical feature, not a later enhancement. The current Simulator build has already populated the original v469 server browser, joined public servers, downloaded data-only server packages, played through death and respawn, survived a map transition, and disconnected through the original menu. Physical-device networking and another player's observation remain required before release promotion.
 
@@ -29,7 +29,7 @@ The release website should publish version, build hash, supported OS/device list
 
 The implemented candidate user flow is:
 
-1. Install and open UT99Apple.
+1. Install and open UTP.
 2. See a short explanation that the app and Unreal Tournament data are separate.
 3. Choose **Get Game Data** or **Import Files**.
 4. Before any download, show the source, approximate size, terms/provenance link, destination, and explicit consent action.

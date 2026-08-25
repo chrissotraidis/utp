@@ -1,16 +1,16 @@
 name: Bug report
-description: Report a reproducible UT99Apple problem without sharing proprietary data or credentials.
+description: Report a reproducible UTP problem without sharing proprietary data or credentials.
 title: "[Bug] "
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing UT99Apple. Never attach game data, a generated engine image, an app/IPA, signing files, credentials, or unredacted diagnostics.
+        Thanks for testing UTP. Never attach game data, a generated engine image, an app/IPA, signing files, credentials, or unredacted diagnostics.
 
   - type: input
     id: commit
     attributes:
-      label: UT99Apple commit
+      label: UTP commit
       description: Run `git rev-parse --short HEAD` or provide the source tag.
       placeholder: abc1234
     validations:

@@ -1,4 +1,4 @@
-# Contributing to UT99Apple
+# Contributing to UTP
 
 Thanks for helping improve the iPhone and iPad experiment.
 

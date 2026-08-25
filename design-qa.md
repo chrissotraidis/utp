@@ -1,4 +1,4 @@
-# UT99Apple touch controls and settings visual QA
+# UTP touch controls and settings visual QA
 
 final result: passed
 

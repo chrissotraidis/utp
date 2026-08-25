@@ -1,4 +1,4 @@
-# UT99Apple
+# UTP
 
 <p align="center">
   <strong>Unreal Tournament 99, experimentally rehosted for iPhone and iPad.</strong><br>
@@ -24,7 +24,7 @@
   <a href="https://github.com/chrissotraidis/utp/issues/new/choose">Report a problem</a>
 </p>
 
-UT99Apple is an experimental native iOS/iPadOS host for the official
+UTP is an experimental native iOS/iPadOS host for the official
 [OldUnreal Unreal Tournament v469e](https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e)
 ARM64 runtime. A deterministic build-time pipeline prepares the runtime for an
 iOS app bundle, replaces or narrowly adapts audited desktop dependencies, and
@@ -225,7 +225,7 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 ## Frequently asked questions
 
 <details>
-<summary><strong>Can I download and play UT99Apple now?</strong></summary>
+<summary><strong>Can I download and play UTP now?</strong></summary>
 
 No public binary, TestFlight, App Store listing, or general IPA install is
 available. The current repository is a developer build and evidence base. A
@@ -314,7 +314,7 @@ files, credentials, or private paths.
 </details>
 
 <details>
-<summary><strong>Is UT99Apple open source?</strong></summary>
+<summary><strong>Is UTP open source?</strong></summary>
 
 Not currently in the broad licensing sense. The project-owned source is being
 prepared for public inspection, but no top-level reuse license has been
@@ -349,7 +349,7 @@ the distinction between Simulator evidence and physical-device acceptance.
 
 ## Legal and acknowledgements
 
-UT99Apple is an independent, unofficial preservation and engineering project.
+UTP is an independent, unofficial preservation and engineering project.
 It is not affiliated with or endorsed by Epic Games, OldUnreal, or Apple.
 Unreal Tournament, Unreal, OldUnreal, Apple platform names, and all other
 third-party names and trademarks belong to their respective owners.

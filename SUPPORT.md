@@ -1,6 +1,6 @@
-# UT99Apple support
+# UTP support
 
-UT99Apple is a development project without a public binary. Support is focused
+UTP is a development project without a public binary. Support is focused
 on reproducible source, build, Simulator, physical-device, and compatibility
 reports.
 

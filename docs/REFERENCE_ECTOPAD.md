@@ -1,6 +1,6 @@
 # EctoPad touch reference
 
-EctoPad is the active visual and interaction baseline for UT99Apple's iPhone and iPad touch interface. GoldenPad is retained only as historical context.
+EctoPad is the active visual and interaction baseline for UTP's iPhone and iPad touch interface. GoldenPad is retained only as historical context.
 
 ## Pinned source
 
@@ -58,7 +58,7 @@ The default composed opacity is EctoPad's source value, `0.82`. Both sticks rend
 
 ## UT99 semantic adaptation
 
-EctoPad's GameCube/Metroid meanings are not copied. UT99Apple uses the reference's physical hierarchy as follows:
+EctoPad's GameCube/Metroid meanings are not copied. UTP uses the reference's physical hierarchy as follows:
 
 | EctoPad archetype | UT99 action |
 | --- | --- |
@@ -77,4 +77,4 @@ The separate sliders icon opens the native host settings/menu.
 
 ## Acceptance method
 
-For each visual iteration, capture one EctoPad reference and one current UT99Apple frame, compare their control zones and hierarchy together, then verify iPad, iPhone, and left-handed geometry. The round iPad controls must have no intersecting finger targets. Simulator evidence is partial; G7 still requires a physical touch-only bot match.
+For each visual iteration, capture one EctoPad reference and one current UTP frame, compare their control zones and hierarchy together, then verify iPad, iPhone, and left-handed geometry. The round iPad controls must have no intersecting finger targets. Simulator evidence is partial; G7 still requires a physical touch-only bot match.

@@ -1,4 +1,4 @@
-# UT99Apple public release checklist
+# UTP public release checklist
 
 This checklist separates a public source snapshot from a downloadable binary.
 Passing the source gate does not authorize or validate a public app release.
