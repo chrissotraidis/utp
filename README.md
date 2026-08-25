@@ -11,7 +11,7 @@
   <img alt="iOS and iPadOS 17 or later" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-17%2B-0A84FF?logo=apple">
   <img alt="FruCoRe Metal renderer" src="https://img.shields.io/badge/renderer-FruCoRe%20Metal-5E5CE6">
   <img alt="Tested on physical iPhone and iPad" src="https://img.shields.io/badge/physical%20iPhone%20%2F%20iPad-tested-30D158">
-  <img alt="No public binary" src="https://img.shields.io/badge/public%20binary-not%20available-8E8E93">
+  <a href="https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1"><img alt="Preview 1 IPA" src="https://img.shields.io/badge/public%20IPA-Preview%201-FF9F0A"></a>
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
@@ -37,25 +37,28 @@ multiplayer protocol. UTP supplies the Apple-platform layer around it—Metal
 presentation, touch input, lifecycle, game-file setup, recovery, and
 diagnostics.
 
-This repository does **not** contain Epic game data, OldUnreal release
-binaries, a generated engine image, signing material, or a downloadable IPA.
+This source tree does **not** contain Epic game data, OldUnreal release
+binaries, generated engine images, signing material, or IPA payloads. Preview
+IPAs are published separately on the
+[GitHub Releases page](https://github.com/chrissotraidis/utp/releases).
 Those boundaries are enforced by [`make public-check`](#repository-safety).
 
 > [!IMPORTANT]
 > UTP builds, signs, installs, launches, and plays on physical iPhone and iPad.
 > Touch gameplay, audio, and controller play have been exercised on real
-> hardware. A public download is not available yet because distribution rights,
-> packaging, and the Apple delivery channel are separate release tasks—not
-> because the game is waiting to work on a device.
+> hardware. [Preview 1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1)
+> is available as an unsigned IPA that must be re-signed before installation.
+> It is a developer preview, not an App Store or TestFlight release.
 
 ## Release status
 
 | Surface | Current status | Meaning |
 |---|---|---|
-| Source repository | **Public-release preparation** | The source tree is being hardened and documented; no public source release tag has been created. |
+| Source repository | **Public** | Source and Preview 1 release notes are available from this repository. |
 | Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
 | iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
-| TestFlight / public IPA | **Not available** | No public binary or general install path exists. A local diagnostic IPA is not a consumer release. |
+| Public IPA | **Preview 1 available** | Download the unsigned IPA from [v0.1.0-preview.1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1) and re-sign it with your own Apple account. |
+| TestFlight / App Store | **Not available** | Preview 1 is a sideloadable developer artifact, not a universal one-tap installation. |
 | App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and release operations remain open. |
 
 The authoritative gate ledger is [`docs/STATUS.md`](docs/STATUS.md). The
@@ -90,9 +93,9 @@ Current repository evidence includes:
   more than 30 minutes and survived three Home/reopen cycles.
 
 The game itself works on physical iPhone and iPad. Narrower known issues and
-follow-up checks—such as particular controller hot-connect paths, pointer
-calibration, UI scaling, shadow fidelity, audio-route interruption, and formal
-release packaging—are tracked in
+follow-up checks, including controller hot-connect, keyboard text entry, menu
+cursor stability, pointer calibration, UI scaling, shadow fidelity, and
+audio-route interruption, are tracked in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## Getting the game files
@@ -274,10 +277,11 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <details>
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
-UTP already works on physical iPhone and iPad, and developers can build and
-sign the current source. What is not available yet is a general public IPA,
-TestFlight, or App Store installation. That distribution gap is separate from
-the game itself working.
+Yes. Download the unsigned IPA from
+[UTP v0.1.0 Preview 1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1),
+then re-sign it with your own Apple account using AltStore Classic with
+AltServer, SideStore, Sideloadly, or an Apple development-signing workflow.
+TestFlight and App Store installation are not available.
 </details>
 
 <details>
@@ -336,13 +340,12 @@ observer-confirmed chat—not whether the original server path works.
 </details>
 
 <details>
-<summary><strong>Why is there no public IPA?</strong></summary>
+<summary><strong>Why must the public IPA be re-signed?</strong></summary>
 
-A raw development IPA is not a universal iOS installer. UTP already works on
-physical hardware; the remaining blockers are transformed-runtime distribution
-permission, acquisition permission for a public binary, privacy/release
-operations, and the chosen Apple delivery channel. TestFlight is the intended
-first external beta path if those gates close.
+Apple does not allow an unsigned IPA to install directly. Preview 1 is stripped
+of the maintainer's provisioning profile and device list so testers can apply
+their own signature. This is still not a universal one-tap installer.
+TestFlight and App Store distribution remain separate future channels.
 </details>
 
 <details>

@@ -2,7 +2,7 @@
 
 ## Current decision
 
-UTP now builds, signs, installs, and launches on a physical iPad. Public distribution is not authorized merely because a development-signed IPA can be produced. The app binary and the game-data acquisition flow have separate permissions and Apple-platform requirements, so they remain separate release artifacts.
+UTP now builds, signs, installs, launches, and plays on physical iPhone and iPad. Preview 1 is distributed as an unsigned, re-signable developer artifact rather than a generally installable Apple-channel release. Publishing that artifact does not settle transformed-runtime permission, acquisition permission, or App Store/TestFlight requirements.
 
 Online play is a launch-critical feature, not a later enhancement. The current Simulator build has already populated the original v469 server browser, joined public servers, downloaded data-only server packages, played through death and respawn, survived a map transition, and disconnected through the original menu. Physical-device networking and another player's observation remain required before release promotion.
 
@@ -10,7 +10,9 @@ Online play is a launch-critical feature, not a later enhancement. The current S
 
 ### Beta
 
-Use TestFlight for the first external beta once physical-device development signing passes. It is the most practical Apple-supported path for testers who are not registering device identifiers or building locally.
+Preview 1 uses an unsigned IPA for testers who understand re-signing and sideloading. TestFlight remains the preferred Apple-supported external beta path once its release gates close.
+
+The Preview 1 IPA contains no maintainer provisioning profile or registered-device list. Testers must re-sign it with their own Apple account using AltStore Classic with AltServer, SideStore, Sideloadly, or an Apple development workflow.
 
 Ad Hoc IPA distribution is useful only for a bounded registered-device test group. A raw IPA on a normal webpage is not a general worldwide installation mechanism: Ad Hoc builds are limited to registered devices, while Apple website distribution requires eligibility, App Store Connect review/notarization, approved domains, installation licensing, and supported regions.
 
