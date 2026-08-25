@@ -3,7 +3,7 @@ import Foundation
 struct UT99TouchConfiguration: Codable, Equatable {
     static let defaultsKey = "ut99.touch.configuration.v1"
     static let supportedActionIDs: Set<String> = [
-        "primaryFire", "alternateFire", "jump", "crouch", "use",
+        "primaryFire", "leftPrimaryFire", "alternateFire", "jump", "crouch", "use",
         "nextWeapon", "previousWeapon", "scoreboard", "pause"
     ]
 
@@ -32,10 +32,10 @@ struct UT99TouchConfiguration: Codable, Equatable {
 
     static let standard = UT99TouchConfiguration(
         leftHanded: false,
-        hiddenActions: [],
+        hiddenActions: ["scoreboard"],
         lookAcceleration: 0.45,
-        lookDeadZone: 0.0025,
-        movementDeadZone: 0.28,
+        lookDeadZone: 0.00025,
+        movementDeadZone: 0.04,
         autoHideForController: true
     )
 
@@ -45,7 +45,7 @@ struct UT99TouchConfiguration: Codable, Equatable {
             hiddenActions: hiddenActions.intersection(Self.supportedActionIDs),
             lookAcceleration: min(max(lookAcceleration, 0), 1.5),
             lookDeadZone: min(max(lookDeadZone, 0), 0.03),
-            movementDeadZone: min(max(movementDeadZone, 0.08), 0.45),
+            movementDeadZone: min(max(movementDeadZone, 0.02), 0.45),
             autoHideForController: autoHideForController
         )
     }
@@ -55,7 +55,29 @@ struct UT99TouchConfiguration: Codable, Equatable {
               let decoded = try? JSONDecoder().decode(Self.self, from: data) else {
             return .standard
         }
-        return decoded.sanitized()
+        var configuration = decoded.sanitized()
+        // Preview builds seeded 28%, which required almost a third of the
+        // stick radius before movement began. Migrate that exact old default
+        // to the new roughly three-times-more-responsive threshold.
+        if abs(configuration.movementDeadZone - 0.28) < 0.0001 ||
+            abs(configuration.movementDeadZone - 0.09) < 0.0001 {
+            configuration.movementDeadZone = Self.standard.movementDeadZone
+        }
+        // The first floating-look preview inherited the swipe surface's
+        // 0.0025 threshold. Its stick publishes at most 0.010 per frame, so
+        // that accidentally discarded the first quarter of thumb travel.
+        if abs(configuration.lookDeadZone - 0.0025) < 0.00001 {
+            configuration.lookDeadZone = Self.standard.lookDeadZone
+        }
+        // Preview builds exposed SCORE by default. Hide it once without
+        // disturbing the player's saved positions or other visibility choices.
+        let scoreMigrationKey = "ut99.touch.migration.hideScore.v1"
+        if !defaults.bool(forKey: scoreMigrationKey) {
+            configuration.hiddenActions.insert("scoreboard")
+            defaults.set(true, forKey: scoreMigrationKey)
+        }
+        configuration.save(to: defaults)
+        return configuration
     }
 
     func save(to defaults: UserDefaults = .standard) {
@@ -90,6 +112,51 @@ struct UT99TouchConfiguration: Codable, Equatable {
 }
 
 enum UT99TouchInputTuning {
+    static func controllerMenuCursor(
+        _ value: CGPoint,
+        deadZone: CGFloat = 0.14
+    ) -> CGPoint {
+        hypot(value.x, value.y) >= deadZone ? value : CGPoint(x: 0, y: 0)
+    }
+
+    /// Reject the small cross-axis wobble common near the cardinal directions
+    /// of a physical thumbstick. Deliberate diagonals remain unchanged once
+    /// the secondary axis passes 30 percent travel.
+    static func controllerMovement(
+        _ value: CGPoint,
+        axisDeadZone: CGFloat = 0.12,
+        cardinalThreshold: CGFloat = 0.30
+    ) -> CGPoint {
+        var result = CGPoint(
+            x: abs(value.x) >= axisDeadZone ? value.x : 0,
+            y: abs(value.y) >= axisDeadZone ? value.y : 0
+        )
+        if abs(result.y) > abs(result.x), abs(result.x) < cardinalThreshold {
+            result.x = 0
+        } else if abs(result.x) > abs(result.y), abs(result.y) < cardinalThreshold {
+            result.y = 0
+        }
+        return result
+    }
+
+    /// Convert a radial stick into a bounded per-frame relative-look value.
+    /// A small physical dead zone rejects resting noise, while the sub-linear
+    /// curve responds early and the lower ceiling preserves control at full
+    /// thumb travel.
+    static func floatingStickLook(
+        _ value: CGPoint,
+        deadZone: CGFloat = 0.035,
+        maximumPerFrame: CGFloat = 0.0065,
+        exponent: CGFloat = 0.72
+    ) -> CGPoint {
+        let magnitude = hypot(value.x, value.y)
+        guard magnitude > deadZone else { return CGPoint(x: 0, y: 0) }
+        let direction = CGPoint(x: value.x / magnitude, y: value.y / magnitude)
+        let normalized = min(max((magnitude - deadZone) / max(1 - deadZone, 0.001), 0), 1)
+        let response = pow(normalized, exponent) * maximumPerFrame
+        return CGPoint(x: direction.x * response, y: direction.y * response)
+    }
+
     static func transformedLook(
         _ value: CGPoint,
         sensitivity: Double,

@@ -89,6 +89,31 @@ struct DataImportTransactionTests {
             throw TestFailure("cancelled import replaced the installed manifest")
         }
 
+        try Data("player-user-settings".utf8).write(to: system.appendingPathComponent("User.ini"))
+        let runtimeSource = root.appendingPathComponent("runtime-source", isDirectory: true)
+        try writeRuntimeImportSource(at: runtimeSource)
+        let runtimeImported = try UT99DataImporter.importFolder(
+            runtimeSource,
+            to: root,
+            cancellation: UT99ImportCancellation()
+        ) { _ in }
+        guard runtimeImported == 16,
+              UT99RuntimeSupport.missingRequiredFiles(at: root).isEmpty,
+              !UT99RuntimeSupport.isReady(at: root) else {
+            throw TestFailure("runtime-support import was incomplete: \(runtimeImported)")
+        }
+        try expect(system.appendingPathComponent("User.ini"), equals: "player-user-settings")
+        try expect(system.appendingPathComponent("Core.u"), equals: "runtime-Core.u")
+        try expect(system.appendingPathComponent("keep.txt"), equals: "system-must-survive")
+        guard !fileManager.fileExists(atPath: system.appendingPathComponent("Engine.dll").path),
+              fileManager.fileExists(atPath: system.appendingPathComponent("DefaultUser.ini").path) else {
+            throw TestFailure("runtime native-code filter or DefaultUser alias failed")
+        }
+        let runtimeInspection = try UT99DataImportTransaction.inspectInstalledManifest(at: root)
+        guard runtimeInspection.isValid, runtimeInspection.expectedFiles == 16 else {
+            throw TestFailure("runtime-support manifest did not verify")
+        }
+
         let hashCancellationFile = root.appendingPathComponent("hash-cancellation.bin")
         try Data(repeating: 0x5a, count: 2_200_000).write(to: hashCancellationFile)
         var hashChecks = 0
@@ -118,7 +143,7 @@ struct DataImportTransactionTests {
             throw TestFailure("transaction debris remained: \(leftovers)")
         }
 
-        print("UT99 data transaction PASS rollback=true replacement=true cancellation=true atomicBoundary=true hashCancellation=true manifest=4/4 systemPreserved=true")
+        print("UT99 data transaction PASS rollback=true replacement=true cancellation=true atomicBoundary=true hashCancellation=true runtimeSupport=true systemPreserved=true")
     }
 
     private static func staging(in root: URL, name: String, marker: String) throws -> (root: URL, manifest: Data) {
@@ -156,6 +181,20 @@ struct DataImportTransactionTests {
             let filename = directory == "Maps" ? "\(marker).unr" : "\(marker).dat"
             try Data("\(marker)-\(directory)".utf8).write(to: folder.appendingPathComponent(filename))
         }
+    }
+
+    private static func writeRuntimeImportSource(at root: URL) throws {
+        try writeImportSource(at: root, marker: "runtime")
+        let system = root.appendingPathComponent(UT99RuntimeSupport.systemDirectoryName, isDirectory: true)
+        try FileManager.default.createDirectory(at: system, withIntermediateDirectories: true)
+        for name in UT99RuntimeSupport.requiredSystemFileNames {
+            try Data("runtime-\(name)".utf8).write(to: system.appendingPathComponent(name))
+        }
+        let textures = root.appendingPathComponent("Textures", isDirectory: true)
+        for name in UT99RuntimeSupport.requiredTextureFileNames {
+            try Data("runtime-\(name)".utf8).write(to: textures.appendingPathComponent(name))
+        }
+        try Data("native".utf8).write(to: system.appendingPathComponent("Engine.dll"))
     }
 
     private static func expect(_ url: URL, equals expected: String) throws {

@@ -14,6 +14,7 @@ final class UT99EngineBridge {
         static let safeTextures = "ut99.graphics.safeTextures"
         static let verticalSync = "ut99.graphics.vsync"
         static let audioEnabled = "ut99.audio.enabled"
+        static let audioDefaultMigration = "ut99.audio.defaultEnabledMigration.v1"
     }
     struct RendererMetrics {
         let averageFPS: Double
@@ -44,18 +45,38 @@ final class UT99EngineBridge {
     private var handle: UnsafeMutableRawPointer?
     private var metalShimHandle: UnsafeMutableRawPointer?
     private var movementKeys = Set<Int32>()
+    private let controllerLookQueue = DispatchQueue(label: "com.ut99apple.controller-look", qos: .userInteractive)
+    private var controllerLookValue = CGPoint.zero
+    private var controllerLookTimer: DispatchSourceTimer?
+    private let menuCursorQueue = DispatchQueue(label: "com.ut99apple.menu-cursor", qos: .userInteractive)
+    private var menuCursorValue = CGPoint.zero
+    private var menuCursorTimer: DispatchSourceTimer?
+    private var menuCursorPosition = CGPoint.zero
+    private var menuCursorCanvasSize = CGSize.zero
 
     init() {
-        UserDefaults.standard.register(defaults: [
+        let defaults = UserDefaults.standard
+        defaults.register(defaults: [
             SettingsKey.lookSensitivity: 1.0,
             SettingsKey.invertLookY: false,
             SettingsKey.safeTextures: true,
             SettingsKey.verticalSync: true,
-            SettingsKey.audioEnabled: false
+            SettingsKey.audioEnabled: true
         ])
+        // Early previews persisted audio off while the engine path was still
+        // diagnostic-only. Migrate that stale value once; later player choices
+        // remain respected.
+        if !defaults.bool(forKey: SettingsKey.audioDefaultMigration) {
+            defaults.set(true, forKey: SettingsKey.audioEnabled)
+            defaults.set(true, forKey: SettingsKey.audioDefaultMigration)
+        }
     }
 
     deinit {
+        controllerLookTimer?.cancel()
+        controllerLookTimer = nil
+        menuCursorTimer?.cancel()
+        menuCursorTimer = nil
         if let handle {
             dlclose(handle)
         }
@@ -82,6 +103,7 @@ final class UT99EngineBridge {
 
     func startOriginalEntry(
         connectURL: String? = nil,
+        safeMode: Bool = false,
         onExit: ((Int32) -> Void)? = nil
     ) -> ProbeResult {
         if handle == nil {
@@ -115,7 +137,18 @@ final class UT99EngineBridge {
         // already staged the equivalent tree in Application Support, so enter
         // at its System directory before invoking the unmodified engine.
         let systemRoot = supportRoot.appendingPathComponent("System", isDirectory: true)
-        try? FileManager.default.createDirectory(at: systemRoot, withIntermediateDirectories: true)
+        do {
+            try UT99RuntimeSupport.prepareMutableConfigurations(at: supportRoot)
+        } catch {
+            return .failed("runtime configuration preparation failed: \(error.localizedDescription)")
+        }
+        var missingRuntimeFiles = UT99RuntimeSupport.missingRuntimeFiles(at: supportRoot)
+        if !FileManager.default.fileExists(atPath: systemRoot.appendingPathComponent("default.metallib").path) {
+            missingRuntimeFiles.append("default.metallib")
+        }
+        guard missingRuntimeFiles.isEmpty else {
+            return .failed("runtime support missing: \(missingRuntimeFiles.joined(separator: ", "))")
+        }
         let changedDirectory = FileManager.default.changeCurrentDirectoryPath(systemRoot.path)
         var cwdBuffer = [CChar](repeating: 0, count: 4096)
         let cwd = getcwd(&cwdBuffer, cwdBuffer.count).map { String(cString: $0) } ?? "<unavailable>"
@@ -134,17 +167,26 @@ final class UT99EngineBridge {
         } else {
             NSLog("UT99EngineBridge: Metal shim BC1 fallback is not loaded")
         }
+        let defaults = UserDefaults.standard
+        let safeTextures = safeMode || defaults.bool(forKey: SettingsKey.safeTextures)
+        let verticalSync = safeMode || defaults.bool(forKey: SettingsKey.verticalSync)
+        let audioEnabled = !safeMode &&
+            (CommandLine.arguments.contains("-UT99AudioEnabled") || defaults.bool(forKey: SettingsKey.audioEnabled))
         applyAppleGraphicsProfile(
             to: URL(fileURLWithPath: iniPath),
-            safeTextures: UserDefaults.standard.bool(forKey: SettingsKey.safeTextures),
-            verticalSync: UserDefaults.standard.bool(forKey: SettingsKey.verticalSync)
+            safeTextures: safeTextures,
+            verticalSync: verticalSync
         )
         applyAppleNetworkProfile(to: URL(fileURLWithPath: iniPath))
-        if CommandLine.arguments.contains("-UT99AudioEnabled") || UserDefaults.standard.bool(forKey: SettingsKey.audioEnabled) {
+        if audioEnabled {
             applyAppleAudioProfile(to: URL(fileURLWithPath: iniPath))
         }
         NSLog("UT99EngineBridge engine cwd changed=%@ path=%@ actual=%@ iniReadable=%@", changedDirectory.description, systemRoot.path, cwd, iniReadable ? "true" : "false")
         let stdoutURL = supportRoot.appendingPathComponent("UT99-engine.stdout")
+        // One engine defect must not consume the player's storage forever.
+        // Diagnostics are session-scoped, so reset the redirected log before
+        // each launch instead of appending unbounded per-frame messages.
+        try? Data().write(to: stdoutURL, options: .atomic)
         freopen(stdoutURL.path, "a", stdout)
         freopen(stdoutURL.path, "a", stderr)
         setbuf(stdout, nil)
@@ -152,7 +194,6 @@ final class UT99EngineBridge {
         let readableText = iniReadable ? "true" : "false"
         let runtimeCheck = "UT99EngineBridge cwd=\(cwd) ini=\(iniPath) readable=\(readableText)\\n"
         FileHandle.standardError.write(Data(runtimeCheck.utf8))
-        let audioEnabled = CommandLine.arguments.contains("-UT99AudioEnabled") || UserDefaults.standard.bool(forKey: SettingsKey.audioEnabled)
         let requestedMap = commandLineValue(prefix: "-UT99Map=") ?? "DM-Deck16]["
         let requestedGame = commandLineValue(prefix: "-UT99Game=") ?? "Botpack.DeathMatchPlus"
         var arguments: [String]
@@ -227,11 +268,13 @@ final class UT99EngineBridge {
             ini = ini.replacingOccurrences(of: section, with: section + "\nbShownWindow=True")
         }
 
-        // SDL reports UIKit pointer deltas in logical points. WindowConsole's
-        // desktop default scales every axis delta by 0.6, which makes an
-        // absolute iPad tap drift away from the visible UWindow target. Keep
-        // the original engine path but make its menu cursor point-for-point on
-        // Apple touch/pointer surfaces.
+        // In menu mode SDLDrv converts the final absolute SDL point into an
+        // axis correction by subtracting UWindow's current cursor position.
+        // MouseScale must remain 1 so that correction reaches the requested
+        // point in one event, including after gameplay has moved the cursor.
+        // ConfiguredGUIScale controls visuals only and is not an input factor.
+        let pointerScale = 1.0
+        let pointerScaleLine = String(format: "MouseScale=%.6f", pointerScale)
         let consoleSection = "[UMenu.UnrealConsole]"
         var inConsoleSection = false
         var normalizedLines: [String] = []
@@ -239,7 +282,7 @@ final class UT99EngineBridge {
             if line == consoleSection {
                 inConsoleSection = true
                 normalizedLines.append(line)
-                normalizedLines.append("MouseScale=1.000000")
+                normalizedLines.append(pointerScaleLine)
                 continue
             }
             if line.hasPrefix("[") && line.hasSuffix("]") {
@@ -250,11 +293,17 @@ final class UT99EngineBridge {
         }
         ini = normalizedLines.joined(separator: "\n")
         try? ini.write(to: iniURL, atomically: true, encoding: .utf8)
-        NSLog("UT99 applied Apple network/input profile: configured-speed prompt acknowledged, UWindow MouseScale=1")
+        NSLog("UT99 applied Apple network/input profile: configured-speed prompt acknowledged, UWindow MouseScale=%.6f",
+              pointerScale)
     }
 
     private func applyAppleGraphicsProfile(to iniURL: URL, safeTextures: Bool, verticalSync: Bool) {
         guard var ini = try? String(contentsOf: iniURL, encoding: .utf8) else { return }
+        // Retail Windows configs use CRLF while the v469e macOS templates use
+        // LF. Normalize before section-aware rewrites so preserved user INIs
+        // select the same iOS renderer as newly generated ones.
+        ini = ini.replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
         // The desktop renderer may select S3TC/DXT1 textures. The iOS Metal
         // path must receive decompressed 32-bit textures because BC1 can be
         // unavailable on the simulator and on some Apple GPU families.
@@ -278,6 +327,17 @@ final class UT99EngineBridge {
         let syncValue = verticalSync ? "True" : "False"
         ini = ini.components(separatedBy: "\n").map { line in
             if line.hasPrefix("[") && line.hasSuffix("]") { section = line }
+            if section == "[Engine.Engine]" {
+                if line.hasPrefix("GameRenderDevice=") {
+                    return "GameRenderDevice=FruCoRe.FruCoReRenderDevice"
+                }
+                if line.hasPrefix("WindowedRenderDevice=") {
+                    return "WindowedRenderDevice=FruCoRe.FruCoReRenderDevice"
+                }
+                if line.hasPrefix("RenderDevice=") {
+                    return "RenderDevice=FruCoRe.FruCoReRenderDevice"
+                }
+            }
             if section == "[SDLDrv.SDLClient]" {
                 if line.hasPrefix("WindowedViewportX=") { return "WindowedViewportX=\(gameWidth)" }
                 if line.hasPrefix("WindowedViewportY=") { return "WindowedViewportY=\(gameHeight)" }
@@ -296,10 +356,57 @@ final class UT99EngineBridge {
                 with: frucoreSection + "\nUseS3TC=False\nUseCompression=False\nTexDXT1ToDXT3=True\nUse32BitTextures=True\n"
             )
         }
+        ini = seedAppleGUIScaleIfMissing(in: ini, backingScale: UIScreen.main.scale)
         try? ini.write(to: iniURL, atomically: true, encoding: .utf8)
         NSLog("UT99 applied Apple graphics profile: safeTextures=%@ vsync=%@ SDL full-bleed=%dx%d",
               safeTextures ? "true" : "false", verticalSync ? "true" : "false",
               gameWidth, gameHeight)
+    }
+
+    private func seedAppleGUIScaleIfMissing(in ini: String, backingScale: CGFloat) -> String {
+        let targetSection = "[UMenu.UMenuRootWindow]"
+        // v469e's supported maximum is 3x. A Retina-derived 2x setting left
+        // the original desktop menu below a finger-sized target on the 12.9in
+        // iPad, so new installs and the prior seeded 2x value use 3x.
+        let configuredValue = "3.0"
+        var output: [String] = []
+        var inTarget = false
+        var foundTarget = false
+        var foundConfigured = false
+        var foundAutomatic = false
+
+        for line in ini.components(separatedBy: "\n") {
+            let isSection = line.hasPrefix("[") && line.hasSuffix("]")
+            if isSection && inTarget {
+                if !foundConfigured { output.append("ConfiguredGUIScale=\(configuredValue)") }
+                if !foundAutomatic { output.append("AutoGUIScale=False") }
+                inTarget = false
+            }
+            if isSection && line == targetSection {
+                inTarget = true
+                foundTarget = true
+            }
+            if inTarget && line.hasPrefix("ConfiguredGUIScale=") {
+                foundConfigured = true
+                let value = line.split(separator: "=", maxSplits: 1).last.flatMap { Double($0) }
+                if value == 2.0 {
+                    output.append("ConfiguredGUIScale=\(configuredValue)")
+                    continue
+                }
+            }
+            if inTarget && line.hasPrefix("AutoGUIScale=") { foundAutomatic = true }
+            output.append(line)
+        }
+        if inTarget {
+            if !foundConfigured { output.append("ConfiguredGUIScale=\(configuredValue)") }
+            if !foundAutomatic { output.append("AutoGUIScale=False") }
+        } else if !foundTarget {
+            if output.last?.isEmpty == false { output.append("") }
+            output.append(targetSection)
+            output.append("ConfiguredGUIScale=\(configuredValue)")
+            output.append("AutoGUIScale=False")
+        }
+        return output.joined(separator: "\n")
     }
 
     func rendererMetrics() -> RendererMetrics {
@@ -364,7 +471,7 @@ final class UT99EngineBridge {
     func publishTouchAction(_ action: GoldenPadTouchOverlay.Action, pressed: Bool) {
         NSLog("UT99TouchBridge action=%@ pressed=%@", action.rawValue, pressed ? "true" : "false")
         switch action {
-        case .primaryFire: pushMouseButton(button: 1, pressed: pressed) // LeftMouse=Fire
+        case .primaryFire, .leftPrimaryFire: pushMouseButton(button: 1, pressed: pressed) // LeftMouse=Fire
         case .alternateFire: pushMouseButton(button: 3, pressed: pressed) // RightMouse=AltFire
         case .jump: pushKey(key: 32, pressed: pressed) // Space=Jump
         case .use: pushKey(key: 13, pressed: pressed) // Enter=InventoryActivate
@@ -377,17 +484,22 @@ final class UT99EngineBridge {
     }
 
     func publishTouchMove(_ value: CGPoint, active: Bool) {
-        // UT99's default movement bindings are digital W/A/S/D. Mouse motion
-        // is camera look, so using it for the movement stick makes the player
-        // spin instead of walk. Keep the analog gesture as a directional
-        // digital hold and release each edge explicitly.
+        // The verified v469e User.ini binds movement to the arrow keys. Its
+        // W/A/D entries are empty and S is an axis command, so a WASD bridge
+        // cannot move this player. Keep the analog gesture as directional
+        // arrow-key holds and release every edge explicitly.
         let deadZone = CGFloat(UT99TouchConfiguration.load().movementDeadZone)
         var desired = Set<Int32>()
         if active {
-            if value.y > deadZone { desired.insert(119) } // W: forward
-            if value.y < -deadZone { desired.insert(115) } // S: backward
-            if value.x < -deadZone { desired.insert(97) } // A: strafe left
-            if value.x > deadZone { desired.insert(100) } // D: strafe right
+            if value.y > deadZone { desired.insert((1 << 30) | 82) } // Up: MoveForward
+            if value.y < -deadZone { desired.insert((1 << 30) | 81) } // Down: MoveBackward
+            if value.x < -deadZone { desired.insert((1 << 30) | 80) } // Left: StrafeLeft
+            if value.x > deadZone { desired.insert((1 << 30) | 79) } // Right: StrafeRight
+        }
+        if desired != movementKeys {
+            NSLog("UT99TouchBridge movement x=%.3f y=%.3f active=%@ held=%@",
+                  value.x, value.y, active ? "true" : "false",
+                  desired.sorted().map(String.init).joined(separator: ","))
         }
         for key in movementKeys.subtracting(desired) { pushKey(key: key, pressed: false) }
         for key in desired.subtracting(movementKeys) { pushKey(key: key, pressed: true) }
@@ -409,26 +521,192 @@ final class UT99EngineBridge {
             invertY: invertY
         )
         pushMouseMotion(
-            xrel: Int32((tuned.x * 900).rounded()),
-            yrel: Int32((tuned.y * 900).rounded())
+            xrel: Int32((tuned.x * 2_700).rounded()),
+            yrel: Int32((tuned.y * 2_700).rounded())
         )
         if !active { pushMouseMotion(xrel: 0, yrel: 0) }
     }
 
+    /// A physical right stick reports only when its value changes, while UT
+    /// needs relative mouse input continuously for as long as the stick is
+    /// held. Repeat the held value off-main so controller aiming remains truly
+    /// native even while the legacy engine owns UIKit's main run loop.
+    func publishControllerLook(_ value: CGPoint, active: Bool) {
+        controllerLookQueue.async { [weak self] in
+            guard let self else { return }
+            self.controllerLookValue = active ? value : .zero
+            if active {
+                guard self.controllerLookTimer == nil else { return }
+                let timer = DispatchSource.makeTimerSource(queue: self.controllerLookQueue)
+                timer.schedule(deadline: .now(), repeating: .milliseconds(16), leeway: .milliseconds(2))
+                timer.setEventHandler { [weak self] in
+                    guard let self else { return }
+                    self.publishTouchLook(
+                        UT99TouchInputTuning.floatingStickLook(
+                            self.controllerLookValue,
+                            deadZone: 0.08
+                        ),
+                        active: true
+                    )
+                }
+                self.controllerLookTimer = timer
+                timer.resume()
+            } else {
+                self.controllerLookTimer?.cancel()
+                self.controllerLookTimer = nil
+                self.publishTouchLook(.zero, active: false)
+            }
+        }
+    }
+
+    func releaseControllerLook() {
+        publishControllerLook(.zero, active: false)
+    }
+
+    /// UWindow renders its software arrow, so the host keeps only an invisible
+    /// visual-point position. The movement stick updates this position like a
+    /// trackpad; there is never a second host-drawn targeting cursor.
+    func beginMenuCursor(canvasSize: CGSize) {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return }
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            self.menuCursorCanvasSize = canvasSize
+            self.menuCursorPosition = CGPoint(x: canvasSize.width * 0.5, y: canvasSize.height * 0.5)
+            self.publishGameSurfacePointer(location: self.menuCursorPosition, pressed: nil, anchor: true)
+        }
+    }
+
+    func updateMenuCursorCanvasSize(_ canvasSize: CGSize) {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return }
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            let oldSize = self.menuCursorCanvasSize
+            let normalized = CGPoint(
+                x: oldSize.width > 0 ? self.menuCursorPosition.x / oldSize.width : 0.5,
+                y: oldSize.height > 0 ? self.menuCursorPosition.y / oldSize.height : 0.5
+            )
+            self.menuCursorCanvasSize = canvasSize
+            self.menuCursorPosition = CGPoint(
+                x: min(max(normalized.x, 0), 1) * canvasSize.width,
+                y: min(max(normalized.y, 0), 1) * canvasSize.height
+            )
+        }
+    }
+
+    func publishMenuCursor(_ value: CGPoint, active: Bool) {
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            self.menuCursorValue = active ? value : .zero
+            guard active else {
+                self.menuCursorTimer?.cancel()
+                self.menuCursorTimer = nil
+                return
+            }
+            guard self.menuCursorTimer == nil else { return }
+            let timer = DispatchSource.makeTimerSource(queue: self.menuCursorQueue)
+            timer.schedule(deadline: .now(), repeating: .milliseconds(16), leeway: .milliseconds(2))
+            timer.setEventHandler { [weak self] in self?.advanceMenuCursor() }
+            self.menuCursorTimer = timer
+            timer.resume()
+        }
+    }
+
+    private func advanceMenuCursor() {
+        let magnitude = min(CGFloat(1), sqrt(
+            menuCursorValue.x * menuCursorValue.x + menuCursorValue.y * menuCursorValue.y
+        ))
+        let deadZone: CGFloat = 0.10
+        guard magnitude > deadZone,
+              menuCursorCanvasSize.width > 0,
+              menuCursorCanvasSize.height > 0 else { return }
+        // A squared response is deliberately slow near center for tiny menu
+        // targets, but still crosses an iPad display in a few seconds.
+        let normalized = min(1, (magnitude - deadZone) / (1 - deadZone))
+        let speed = 1.0 + (normalized * normalized * 8.0)
+        let direction = CGPoint(x: menuCursorValue.x / magnitude, y: menuCursorValue.y / magnitude)
+        menuCursorPosition.x += direction.x * speed
+        menuCursorPosition.y -= direction.y * speed
+        menuCursorPosition.x = min(max(menuCursorPosition.x, 0), menuCursorCanvasSize.width)
+        menuCursorPosition.y = min(max(menuCursorPosition.y, 0), menuCursorCanvasSize.height)
+        publishGameSurfacePointer(location: menuCursorPosition, pressed: nil)
+    }
+
+    func publishMenuCursorClick(pressed: Bool) {
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            self.publishGameSurfacePointer(location: self.menuCursorPosition, pressed: pressed)
+        }
+    }
+
+    /// Keep physical pointer/trackpad motion and the touch/controller
+    /// trackball on one UWindow cursor. The next stick movement continues from
+    /// the exact point most recently reported by UIKit.
+    func publishExternalMenuPointer(location: CGPoint, pressed: Bool?, anchor: Bool = false) {
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            let width = max(self.menuCursorCanvasSize.width, location.x)
+            let height = max(self.menuCursorCanvasSize.height, location.y)
+            self.menuCursorPosition = CGPoint(
+                x: min(max(location.x, 0), width),
+                y: min(max(location.y, 0), height)
+            )
+            self.publishGameSurfacePointer(location: self.menuCursorPosition, pressed: pressed, anchor: anchor)
+        }
+    }
+
+    func releaseMenuCursor() {
+        menuCursorQueue.async { [weak self] in
+            guard let self else { return }
+            self.menuCursorValue = .zero
+            self.menuCursorTimer?.cancel()
+            self.menuCursorTimer = nil
+        }
+    }
+
+    /// USDLViewport::UpdateInput uses this member to choose captured relative
+    /// gameplay motion (nonzero) versus absolute UWindow menu motion (zero).
+    /// Reading the engine's own current viewport avoids guessing from SDL's
+    /// global relative-mode flag, which remains enabled in both states.
+    func isGameplayMouseCaptureEnabled() -> Bool {
+        guard let handle,
+              let symbol = dlsym(handle, "GCurrentViewport"),
+              let viewport = symbol.assumingMemoryBound(to: UnsafeMutableRawPointer?.self).pointee else {
+            return false
+        }
+        return viewport.load(fromByteOffset: 0x1A8, as: Int32.self) != 0
+    }
+
+    /// A normal launch enters the noninteractive CityIntro map first. Open the
+    /// stock UWindow title menu once SDL is ready, then establish the same
+    /// cursor position the stick and SELECT button will use.
+    func scheduleInitialOriginalMenu() {
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(2)) { [weak self] in
+            guard let self else { return }
+            self.pushKey(key: 27, pressed: true)
+            self.pushKey(key: 27, pressed: false)
+            self.menuCursorQueue.asyncAfter(deadline: .now() + .milliseconds(180)) { [weak self] in
+                guard let self else { return }
+                self.publishGameSurfacePointer(location: self.menuCursorPosition, pressed: nil, anchor: true)
+            }
+        }
+    }
+
     /// Publish an absolute pointer location before each optional left-button
-    /// edge. UWindow uses SDL's logical point-space mouse coordinates, while
-    /// Metal independently renders at the native backing scale.
-    func publishGameSurfacePointer(location: CGPoint, pressed: Bool?) {
-        let x = Int32(max(0, min(CGFloat(Int32.max), location.x)).rounded())
-        let y = Int32(max(0, min(CGFloat(Int32.max), location.y)).rounded())
+    /// edge. SDL's window point size and UIKit's presentation point size are
+    /// both 1366x1024 on the physical iPad; drawable and GUI scale must not
+    /// shrink the cursor's reachable range.
+    func publishGameSurfacePointer(location: CGPoint, pressed: Bool?, anchor: Bool = false) {
+        let enginePoint = location
+        let x = Int32(max(0, min(CGFloat(Int32.max), enginePoint.x)).rounded())
+        let y = Int32(max(0, min(CGFloat(Int32.max), enginePoint.y)).rounded())
         let (window, windowID) = focusedSDLWindow()
         if let handle,
            let symbol = dlsym(handle, "SDL_UT99SendMousePointer") {
             typealias SendPointer = @convention(c) (
-                UnsafeMutableRawPointer?, Int32, Int32, Int32
+                UnsafeMutableRawPointer?, Int32, Int32, Int32, Int32
             ) -> Int32
             let edge: Int32 = pressed.map { $0 ? 1 : 0 } ?? -1
-            let result = unsafeBitCast(symbol, to: SendPointer.self)(window, x, y, edge)
+            let result = unsafeBitCast(symbol, to: SendPointer.self)(window, x, y, edge, anchor ? 1 : 0)
             var stateX: Int32 = -1
             var stateY: Int32 = -1
             if let stateSymbol = dlsym(handle, "SDL_GetMouseState") {
@@ -437,9 +715,12 @@ final class UT99EngineBridge {
                 ) -> UInt32
                 _ = unsafeBitCast(stateSymbol, to: GetMouseState.self)(&stateX, &stateY)
             }
-            NSLog("UT99PointerBridge point=%.1f,%.1f logical=%d,%d state=%d,%d windowID=%u pressed=%@ transport=stateful result=%d",
-                  location.x, location.y, x, y, stateX, stateY, windowID,
-                  pressed.map { $0 ? "true" : "false" } ?? "motion", result)
+            if pressed != nil || anchor {
+                NSLog("UT99PointerBridge host=%.1f,%.1f calibrated=%.1f,%.1f logical=%d,%d state=%d,%d windowID=%u pressed=%@ anchor=%@ transport=stateful result=%d",
+                      location.x, location.y, enginePoint.x, enginePoint.y, x, y, stateX, stateY, windowID,
+                      pressed.map { $0 ? "true" : "false" } ?? "motion",
+                      anchor ? "true" : "false", result)
+            }
             return
         }
         if let window,
@@ -448,8 +729,8 @@ final class UT99EngineBridge {
             typealias WarpMouse = @convention(c) (UnsafeMutableRawPointer?, Int32, Int32) -> Void
             unsafeBitCast(symbol, to: WarpMouse.self)(window, x, y)
         }
-        NSLog("UT99PointerBridge point=%.1f,%.1f logical=%d,%d windowID=%u pressed=%@ transport=queued",
-              location.x, location.y, x, y, windowID,
+        NSLog("UT99PointerBridge host=%.1f,%.1f calibrated=%.1f,%.1f logical=%d,%d windowID=%u pressed=%@ transport=queued",
+              location.x, location.y, enginePoint.x, enginePoint.y, x, y, windowID,
               pressed.map { $0 ? "true" : "false" } ?? "motion")
         pushMouseMotion(windowID: windowID, x: x, y: y, xrel: 0, yrel: 0)
         if let pressed {
@@ -479,21 +760,98 @@ final class UT99EngineBridge {
     func publishHardwareKey(usage: Int, pressed: Bool) {
         guard let key = SDLKeySym(usage: usage) else { return }
         NSLog("UT99KeyboardBridge usage=%hu sym=%d pressed=%@", usage, key, pressed ? "true" : "false")
-        pushKey(key: key, pressed: pressed)
+        pushHardwareKey(usage: usage, key: key, pressed: pressed)
+    }
+
+    @discardableResult
+    func publishTextEntry(_ text: String) -> Bool {
+        if let handle, let symbol = dlsym(handle, "SDL_UT99SendKeyboardText") {
+            typealias SendText = @convention(c) (UnsafePointer<CChar>?) -> Int32
+            let sendText = unsafeBitCast(symbol, to: SendText.self)
+            return text.withCString { sendText($0) >= 0 }
+        }
+        let strokes = text.unicodeScalars.compactMap { scalar -> (usage: Int, shifted: Bool)? in
+            guard scalar.isASCII else { return nil }
+            return hardwareStroke(for: UInt8(scalar.value))
+        }
+        guard !strokes.isEmpty, strokes.count == text.unicodeScalars.count else { return false }
+        for stroke in strokes {
+            if stroke.shifted { publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardLeftShift.rawValue, pressed: true) }
+            publishHardwareKey(usage: stroke.usage, pressed: true)
+            publishHardwareKey(usage: stroke.usage, pressed: false)
+            if stroke.shifted { publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardLeftShift.rawValue, pressed: false) }
+        }
+        return true
+    }
+
+    func publishMenuBackspace() {
+        publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardDeleteOrBackspace.rawValue, pressed: true)
+        publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardDeleteOrBackspace.rawValue, pressed: false)
+    }
+
+    func publishMenuReturn() {
+        publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardReturnOrEnter.rawValue, pressed: true)
+        publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardReturnOrEnter.rawValue, pressed: false)
+    }
+
+    private func hardwareStroke(for ascii: UInt8) -> (usage: Int, shifted: Bool)? {
+        if ascii >= Character("a").asciiValue!, ascii <= Character("z").asciiValue! {
+            return (UIKeyboardHIDUsage.keyboardA.rawValue + Int(ascii - Character("a").asciiValue!), false)
+        }
+        if ascii >= Character("A").asciiValue!, ascii <= Character("Z").asciiValue! {
+            return (UIKeyboardHIDUsage.keyboardA.rawValue + Int(ascii - Character("A").asciiValue!), true)
+        }
+        if ascii >= Character("1").asciiValue!, ascii <= Character("9").asciiValue! {
+            return (UIKeyboardHIDUsage.keyboard1.rawValue + Int(ascii - Character("1").asciiValue!), false)
+        }
+        switch ascii {
+        case Character("0").asciiValue!: return (UIKeyboardHIDUsage.keyboard0.rawValue, false)
+        case Character(" ").asciiValue!: return (UIKeyboardHIDUsage.keyboardSpacebar.rawValue, false)
+        case Character("-").asciiValue!: return (UIKeyboardHIDUsage.keyboardHyphen.rawValue, false)
+        case Character("_").asciiValue!: return (UIKeyboardHIDUsage.keyboardHyphen.rawValue, true)
+        case Character(".").asciiValue!: return (UIKeyboardHIDUsage.keyboardPeriod.rawValue, false)
+        default: return nil
+        }
     }
 
     private func SDLKeySym(usage: Int) -> Int32? {
+        // HID A-Z and 1-0 map directly to SDL's printable keycodes. The
+        // preserved User.ini already binds WASD, E, Q, chat, taunts, and
+        // weapon digits; rewriting those keys as arrows/Enter broke the
+        // player's configured keyboard semantics.
+        if usage >= UIKeyboardHIDUsage.keyboardA.rawValue,
+           usage <= UIKeyboardHIDUsage.keyboardZ.rawValue {
+            return Int32(Character("a").asciiValue!) + Int32(usage - UIKeyboardHIDUsage.keyboardA.rawValue)
+        }
+        if usage >= UIKeyboardHIDUsage.keyboard1.rawValue,
+           usage <= UIKeyboardHIDUsage.keyboard9.rawValue {
+            return Int32(Character("1").asciiValue!) + Int32(usage - UIKeyboardHIDUsage.keyboard1.rawValue)
+        }
+        if usage == UIKeyboardHIDUsage.keyboard0.rawValue { return Int32(Character("0").asciiValue!) }
+
         switch usage {
-        case UIKeyboardHIDUsage.keyboardA.rawValue: return 97
-        case UIKeyboardHIDUsage.keyboardB.rawValue: return 98
-        case UIKeyboardHIDUsage.keyboardC.rawValue: return 99
-        case UIKeyboardHIDUsage.keyboardD.rawValue: return 100
-        case UIKeyboardHIDUsage.keyboardS.rawValue: return 115
-        case UIKeyboardHIDUsage.keyboardW.rawValue: return 119
         case UIKeyboardHIDUsage.keyboardSpacebar.rawValue: return 32
         case UIKeyboardHIDUsage.keyboardReturnOrEnter.rawValue: return 13
         case UIKeyboardHIDUsage.keyboardEscape.rawValue: return 27
         case UIKeyboardHIDUsage.keyboardTab.rawValue: return 9
+        case UIKeyboardHIDUsage.keyboardDeleteOrBackspace.rawValue: return 8
+        case UIKeyboardHIDUsage.keyboardHyphen.rawValue: return 45
+        case UIKeyboardHIDUsage.keyboardEqualSign.rawValue: return 61
+        case UIKeyboardHIDUsage.keyboardOpenBracket.rawValue: return 91
+        case UIKeyboardHIDUsage.keyboardCloseBracket.rawValue: return 93
+        case UIKeyboardHIDUsage.keyboardBackslash.rawValue: return 92
+        case UIKeyboardHIDUsage.keyboardSemicolon.rawValue: return 59
+        case UIKeyboardHIDUsage.keyboardQuote.rawValue: return 39
+        case UIKeyboardHIDUsage.keyboardGraveAccentAndTilde.rawValue: return 96
+        case UIKeyboardHIDUsage.keyboardComma.rawValue: return 44
+        case UIKeyboardHIDUsage.keyboardPeriod.rawValue: return 46
+        case UIKeyboardHIDUsage.keyboardSlash.rawValue: return 47
+        case UIKeyboardHIDUsage.keyboardLeftControl.rawValue: return (1 << 30) | 224
+        case UIKeyboardHIDUsage.keyboardLeftShift.rawValue: return (1 << 30) | 225
+        case UIKeyboardHIDUsage.keyboardLeftAlt.rawValue: return (1 << 30) | 226
+        case UIKeyboardHIDUsage.keyboardRightControl.rawValue: return (1 << 30) | 228
+        case UIKeyboardHIDUsage.keyboardRightShift.rawValue: return (1 << 30) | 229
+        case UIKeyboardHIDUsage.keyboardRightAlt.rawValue: return (1 << 30) | 230
         case UIKeyboardHIDUsage.keyboardF1.rawValue: return (1 << 30) | 58
         case UIKeyboardHIDUsage.keyboardF2.rawValue: return (1 << 30) | 59
         case UIKeyboardHIDUsage.keyboardF3.rawValue: return (1 << 30) | 60
@@ -779,6 +1137,32 @@ final class UT99EngineBridge {
         runServerBrowserPointerSmokeTest(joinFirstServer: true)
     }
 
+    /// Open the original v469 server browser using the stock keyboard route.
+    /// The host enters cursor mode before calling this; no UIKit alert remains
+    /// above the SDL window and no replacement server list is introduced.
+    func openStockServerBrowser(
+        initialDelayMilliseconds: Int = 0,
+        originalMenuAlreadyOpen: Bool = false
+    ) {
+        let keyPress: (Int32) -> Void = { [weak self] key in
+            self?.pushKey(key: key, pressed: true)
+            self?.pushKey(key: key, pressed: false)
+        }
+        let schedule: (Int, @escaping () -> Void) -> Void = { milliseconds, work in
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                deadline: .now() + .milliseconds(initialDelayMilliseconds + milliseconds),
+                execute: work
+            )
+        }
+        let menuDelay = originalMenuAlreadyOpen ? 0 : 180
+        if !originalMenuAlreadyOpen {
+            schedule(0) { keyPress(27) } // Escape opens the Game menu.
+        }
+        schedule(menuDelay) { keyPress((1 << 30) | 79) } // Right selects Multiplayer.
+        schedule(menuDelay + 180) { keyPress((1 << 30) | 81) } // Down selects Find Internet Games.
+        schedule(menuDelay + 360) { keyPress(13) } // Return opens UBrowser.
+    }
+
     private func runServerBrowserPointerSmokeTest(joinFirstServer: Bool) {
         resetServerBrowserSmokeLog()
         let keyEdge: (Int32, Bool) -> Void = { [weak self] key, pressed in
@@ -858,6 +1242,28 @@ final class UT99EngineBridge {
         var event = [UInt8](repeating: 0, count: 56)
         write32(pressed ? 0x300 : 0x301, at: 0, into: &event)
         event[12] = pressed ? 1 : 0
+        write32(UInt32(bitPattern: key), at: 20, into: &event) // SDL_Keysym.sym
+        push(event)
+    }
+
+    /// USB HID usages and SDL scancodes share the same values for the
+    /// keyboard page. Supplying both scancode and symbol matches SDL's native
+    /// hardware-key event and lets UWindow distinguish printable characters
+    /// from symbol-only synthetic actions such as Escape.
+    private func pushHardwareKey(usage: Int, key: Int32, pressed: Bool) {
+        if let handle, let symbol = dlsym(handle, "SDL_UT99SendHardwareKey") {
+            typealias SendHardwareKey = @convention(c) (Int32, Int32, Int32) -> Int32
+            _ = unsafeBitCast(symbol, to: SendHardwareKey.self)(
+                pressed ? 1 : 0,
+                Int32(usage),
+                key
+            )
+            return
+        }
+        var event = [UInt8](repeating: 0, count: 56)
+        write32(pressed ? 0x300 : 0x301, at: 0, into: &event)
+        event[12] = pressed ? 1 : 0
+        write32(UInt32(usage), at: 16, into: &event) // SDL_Keysym.scancode
         write32(UInt32(bitPattern: key), at: 20, into: &event) // SDL_Keysym.sym
         push(event)
     }

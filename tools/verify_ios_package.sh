@@ -6,6 +6,22 @@ frameworks="$app/Frameworks"
 
 [[ -d "$app" && -d "$frameworks" ]] || { echo "missing app/frameworks directory" >&2; exit 2; }
 codesign --verify --deep --strict "$app"
+[[ -s "$app/default.metallib" ]] || { echo "missing embedded FruCoRe shader: default.metallib" >&2; exit 9; }
+
+font_support="$app/UT99FontSupport"
+while read -r expected name; do
+  file="$font_support/$name"
+  [[ -s "$file" ]] || { echo "missing v469e font support: $name" >&2; exit 10; }
+  actual="$(shasum -a 256 "$file" | awk '{print $1}')"
+  [[ "$actual" == "$expected" ]] || {
+    echo "mismatched v469e font support: $name" >&2
+    exit 10
+  }
+done <<'FONTS'
+6cc9525b1334047445cba53f323e810331acfdf59f18f4008397d13137737b91 CourierPrime.ttf
+037236ed4bf58a85f67074c165d308260fd6be01c86d7df4e79ea16eb273f8c5 OpenSans-Regular.ttf
+ff4deb395ff2426bbd08db74cb005b22326175df00f0a156b87e6d2aef1ef508 Tinos-Regular.ttf
+FONTS
 
 if [[ -d "$app/UT99Data/UT99Data" ]]; then
   echo "nested runtime data directory found: UT99Data/UT99Data" >&2

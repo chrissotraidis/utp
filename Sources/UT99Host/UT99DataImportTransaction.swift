@@ -36,6 +36,7 @@ enum UT99DataImportTransaction {
         let format: Int
         let backupDirectoryName: String
         let stagingDirectoryName: String
+        let managedItemNames: [String]?
         var phase: Phase
     }
 
@@ -63,25 +64,32 @@ enum UT99DataImportTransaction {
 
         let manifestURL = stagedRoot.appendingPathComponent(manifestName)
         try manifestData.write(to: manifestURL, options: .atomic)
+        var managedItemNames = contentDirectoryNames + [manifestName]
+        if fileManager.fileExists(
+            atPath: stagedRoot.appendingPathComponent(UT99RuntimeSupport.systemDirectoryName).path
+        ) {
+            managedItemNames.append(UT99RuntimeSupport.systemDirectoryName)
+        }
 
         // Copy the complete last-known-good set before publishing a journal.
         // Therefore a committing journal always points at a usable rollback.
-        for name in contentDirectoryNames + [manifestName] {
+        for name in managedItemNames {
             let current = supportRoot.appendingPathComponent(name)
             guard fileManager.fileExists(atPath: current.path) else { continue }
             try fileManager.copyItem(at: current, to: backupRoot.appendingPathComponent(name))
         }
 
         var journal = Journal(
-            format: 1,
+            format: 2,
             backupDirectoryName: backupName,
             stagingDirectoryName: stagedRoot.lastPathComponent,
+            managedItemNames: managedItemNames,
             phase: .committing
         )
         try writeJournal(journal, to: journalURL)
 
         do {
-            for name in contentDirectoryNames + [manifestName] {
+            for name in managedItemNames {
                 let current = supportRoot.appendingPathComponent(name)
                 if fileManager.fileExists(atPath: current.path) {
                     try fileManager.removeItem(at: current)
@@ -89,7 +97,7 @@ enum UT99DataImportTransaction {
             }
 
             var installedItems = 0
-            for name in contentDirectoryNames + [manifestName] {
+            for name in managedItemNames {
                 let staged = stagedRoot.appendingPathComponent(name)
                 guard fileManager.fileExists(atPath: staged.path) else { continue }
                 try fileManager.moveItem(at: staged, to: supportRoot.appendingPathComponent(name))
@@ -121,9 +129,10 @@ enum UT99DataImportTransaction {
         let journal = try JSONDecoder().decode(Journal.self, from: Data(contentsOf: journalURL))
         let backupRoot = supportRoot.appendingPathComponent(journal.backupDirectoryName, isDirectory: true)
         let stagedRoot = supportRoot.appendingPathComponent(journal.stagingDirectoryName, isDirectory: true)
+        let managedItemNames = journal.managedItemNames ?? (contentDirectoryNames + [manifestName])
 
         if journal.phase == .committing {
-            for name in contentDirectoryNames + [manifestName] {
+            for name in managedItemNames {
                 let current = supportRoot.appendingPathComponent(name)
                 if fileManager.fileExists(atPath: current.path) {
                     try fileManager.removeItem(at: current)

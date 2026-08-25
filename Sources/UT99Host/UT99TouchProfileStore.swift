@@ -89,7 +89,7 @@ enum UT99TouchProfileStore {
 
     static let supportedPresets: Set<String> = ["standard", "ectoPad", "goldenPad", "compact", "highVisibility"]
     static let supportedControls: Set<String> = UT99TouchConfiguration.supportedActionIDs
-        .union(["move", "look"])
+        .union(["move", "menuSelect", "menuBack"])
 
     static func validated(_ source: UT99TouchProfileDocument) throws -> UT99TouchProfileDocument {
         guard source.schemaVersion == UT99TouchProfileDocument.currentSchemaVersion else {

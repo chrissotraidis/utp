@@ -10,6 +10,16 @@ private enum TouchConfigurationTests {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         require(UT99TouchConfiguration.load(from: defaults) == .standard, "standard configuration missing")
+        var legacy = UT99TouchConfiguration.standard
+        legacy.movementDeadZone = 0.28
+        legacy.save(to: defaults)
+        require(UT99TouchConfiguration.load(from: defaults).movementDeadZone == 0.04,
+                "legacy movement response was not migrated")
+        var legacyLook = UT99TouchConfiguration.standard
+        legacyLook.lookDeadZone = 0.0025
+        legacyLook.save(to: defaults)
+        require(UT99TouchConfiguration.load(from: defaults).lookDeadZone == UT99TouchConfiguration.standard.lookDeadZone,
+                "legacy floating-look dead zone was not migrated")
         var stored = UT99TouchConfiguration.standard
         stored.leftHanded = true
         stored.hiddenActions = ["scoreboard", "crouch"]
@@ -49,7 +59,25 @@ private enum TouchConfigurationTests {
         )
         require(inverted.x == slow.x && inverted.y == -slow.y, "invert Y changed the wrong axis")
 
-        print("UT99 touch configuration PASS persistence=true clamping=true deadZone=true acceleration=true invertY=true")
+        let stickDead = UT99TouchInputTuning.floatingStickLook(CGPoint(x: 0.02, y: 0))
+        let stickFine = UT99TouchInputTuning.floatingStickLook(CGPoint(x: 0.10, y: 0))
+        let stickFull = UT99TouchInputTuning.floatingStickLook(CGPoint(x: 1, y: 0))
+        require(stickDead.x == 0 && stickDead.y == 0, "floating stick did not reject resting noise")
+        require(stickFine.x > 0.0005, "floating stick did not respond early")
+        require(abs(stickFull.x - 0.0065) < 0.00001, "floating stick maximum was not bounded")
+
+        let forward = UT99TouchInputTuning.controllerMovement(CGPoint(x: 0.11, y: 0.92))
+        let diagonal = UT99TouchInputTuning.controllerMovement(CGPoint(x: 0.55, y: 0.82))
+        let drift = UT99TouchInputTuning.controllerMovement(CGPoint(x: 0.08, y: -0.07))
+        let menuDrift = UT99TouchInputTuning.controllerMenuCursor(CGPoint(x: 0.09, y: -0.08))
+        let menuMove = UT99TouchInputTuning.controllerMenuCursor(CGPoint(x: 0.20, y: 0.03))
+        require(forward.x == 0 && forward.y == 0.92, "controller forward wobble was not suppressed")
+        require(diagonal.x == 0.55 && diagonal.y == 0.82, "deliberate controller diagonal was changed")
+        require(drift.x == 0 && drift.y == 0, "controller resting drift was not suppressed")
+        require(menuDrift.x == 0 && menuDrift.y == 0, "menu cursor resting drift was not suppressed")
+        require(menuMove.x == 0.20 && menuMove.y == 0.03, "menu cursor deliberate movement changed")
+
+        print("UT99 touch configuration PASS persistence=true migration=true clamping=true deadZone=true acceleration=true invertY=true floatingCurve=true controllerCardinal=true")
     }
 
     private static func require(_ condition: @autoclosure () -> Bool, _ message: String) {

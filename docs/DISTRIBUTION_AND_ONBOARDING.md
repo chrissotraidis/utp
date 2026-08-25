@@ -2,7 +2,7 @@
 
 ## Current decision
 
-UTP is ready to move from Simulator validation to signed physical-device testing. Public distribution is not yet authorized merely because a diagnostic IPA can be produced. The app binary and the game-data acquisition flow have separate permissions and Apple-platform requirements, so they remain separate release artifacts.
+UTP now builds, signs, installs, and launches on a physical iPad. Public distribution is not authorized merely because a development-signed IPA can be produced. The app binary and the game-data acquisition flow have separate permissions and Apple-platform requirements, so they remain separate release artifacts.
 
 Online play is a launch-critical feature, not a later enhancement. The current Simulator build has already populated the original v469 server browser, joined public servers, downloaded data-only server packages, played through death and respawn, survived a map transition, and disconnected through the original menu. Physical-device networking and another player's observation remain required before release promotion.
 
@@ -80,7 +80,7 @@ Collect the first physical frame, touch-only Deck16 play, audible effects/music,
 
 ## Distribution gates still open
 
-- Apple Development signing and physical G2.
+- Formal physical G2 acceptance for the final release candidate.
 - Permission to distribute the transformed OldUnreal runtime as a prebuilt app.
 - Written confirmation that the implemented OldUnreal mirror/fallback acquisition UX may be enabled in a public build.
 - App Store/TestFlight review feasibility and any required account/organization setup.

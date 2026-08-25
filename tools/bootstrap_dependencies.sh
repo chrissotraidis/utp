@@ -72,6 +72,13 @@ ensure_download \
   "official_v469e_macos_reference" \
   "upstream_release_terms"
 
+ensure_download \
+  "ref/OldUnreal/OldUnreal-UTPatch469e-Windows-x86.zip" \
+  "https://github.com/OldUnreal/UnrealTournamentPatches/releases/download/v469e/OldUnreal-UTPatch469e-Windows-x86.zip" \
+  "8c94eb7e990f5480b1fb7bcb1bd15c2512da134dbf01bfa16e7f99f0a8a0ee86" \
+  "hash_pinned_platform_neutral_runtime_acquisition" \
+  "upstream_release_terms"
+
 ensure_git_checkout "ref/SDL2" "https://github.com/libsdl-org/SDL.git" "5d249570393f7a37e037abf22cd6012a4cc56a71" "zlib"
 ensure_git_checkout "ref/OpenAL-Soft" "https://github.com/kcat/openal-soft.git" "2dc741b54a49fc6a7716afd1504ca1056cff7db4" "LGPL-2.0-or-later"
 ensure_git_checkout "ref/libsndfile" "https://github.com/libsndfile/libsndfile.git" "7ff854d1e0bd9a751a9ff52ed980c62afced91fe" "LGPL-2.1-or-later"

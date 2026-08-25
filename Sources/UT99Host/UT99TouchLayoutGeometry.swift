@@ -25,6 +25,29 @@ enum UT99TouchLayoutGeometry {
     static let minimumVisualGap: CGFloat = 12
     static let edgeMargin: CGFloat = 8
 
+    /// Keep the original renderer clear of iPhone cutouts and rounded display
+    /// corners. iPad remains full-bleed; its larger canvas has already passed
+    /// physical acceptance in that form.
+    static func rendererFrame(
+        canvasSize: CGSize,
+        safeInsets: UT99TouchInsets,
+        isPhone: Bool,
+        edgePadding: CGFloat = 4
+    ) -> CGRect {
+        let bounds = CGRect(origin: .zero, size: canvasSize)
+        guard isPhone, canvasSize.width > 0, canvasSize.height > 0 else { return bounds }
+        let left = max(safeInsets.left, edgePadding)
+        let right = max(safeInsets.right, edgePadding)
+        let top = max(safeInsets.top, edgePadding)
+        let bottom = max(safeInsets.bottom, edgePadding)
+        return CGRect(
+            x: left,
+            y: top,
+            width: max(1, canvasSize.width - left - right),
+            height: max(1, canvasSize.height - top - bottom)
+        )
+    }
+
     static func mirroredCenter(
         _ center: CGPoint,
         canvasWidth: CGFloat,
@@ -138,17 +161,19 @@ enum UT99EctoPadReferenceLayout {
                                height: size.height))
         }
 
-        let d = 48 * scale
+        let d = 56 * scale
         let dCenter = CGPoint(x: safeRect.origin.x + 0.2686676428 * safeRect.size.width,
                               y: safeRect.origin.y + 0.7947259566 * safeRect.size.height)
         var result = Dictionary(uniqueKeysWithValues: [
             frame("move", 0.1310395315, 0.7905894519, 172, 172),
-            frame("look", 0.9152542373, 0.9038461538, 112, 112),
-            frame("primaryFire", 0.8898305085, 0.7307692308, 104, 104),
-            frame("alternateFire", 0.8093220339, 0.8076923077, 76, 76),
-            frame("jump", 0.9661016949, 0.6858974359, 62, 62),
-            frame("crouch", 0.9661016949, 0.7820512821, 62, 62),
-            frame("pause", 0.8967789165, 0.5780765253, 116, 62),
+            frame("leftPrimaryFire", 0.2050000000, 0.5900000000, 82, 82),
+            // Actions sit on the far-right arc, leaving the middle-right of
+            // the screen as a long, unobstructed look surface.
+            frame("primaryFire", 0.8898305085, 0.6100000000, 104, 104),
+            frame("alternateFire", 0.8100000000, 0.7000000000, 76, 76),
+            frame("jump", 0.9661016949, 0.5100000000, 62, 62),
+            frame("crouch", 0.9661016949, 0.6200000000, 62, 62),
+            frame("pause", 0.9400000000, 0.1050000000, 134, 62),
             // UT has four low-frequency utility actions that map cleanly to
             // EctoPad's four-direction pad. Weapon cycling belongs on left /
             // right—not on the reference controller's giant analog trigger.
@@ -175,7 +200,6 @@ enum UT99EctoPadReferenceLayout {
         let scale = baseScale * profileScale
         let margin = max(8, 18 * baseScale)
         let stick = 126 * scale
-        let camera = 86 * scale
         let small = 46 * scale
         let medium = 58 * scale
         let large = 78 * scale
@@ -183,12 +207,12 @@ enum UT99EctoPadReferenceLayout {
         let move = CGRect(x: minX + margin,
                           y: maxY - margin - stick,
                           width: stick, height: stick)
-        let look = CGRect(x: maxX - margin - camera,
-                          y: maxY - margin - camera,
-                          width: camera, height: camera)
         let fire = CGRect(x: maxX - margin - large,
-                          y: maxY - margin - camera - large - 18 * scale,
+                          y: maxY - margin - large - 112 * scale,
                           width: large, height: large)
+        let leftFire = CGRect(x: move.midX - medium / 2,
+                              y: max(minY + margin, move.minY - medium - 10 * scale),
+                              width: medium, height: medium)
         let alt = CGRect(x: fire.minX - medium - 12 * scale,
                          y: fire.midY + 8 - medium / 2,
                          width: medium, height: medium)
@@ -203,8 +227,8 @@ enum UT99EctoPadReferenceLayout {
         let startWidth = 92 * scale
         var result: [String: CGRect] = [
             "move": move,
-            "look": look,
             "primaryFire": fire,
+            "leftPrimaryFire": leftFire,
             "alternateFire": alt,
             "jump": jump,
             "crouch": crouch,

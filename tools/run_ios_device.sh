@@ -84,12 +84,14 @@ xcrun devicectl device install app --device "$device_identifier" "$app"
 echo "device_install=passed"
 [[ "$mode" == "--install" ]] && exit 0
 
-launch_args=()
 if [[ "${UT99_DEVICE_AUTOSTART:-0}" == "1" ]]; then
-  launch_args=(-UT99AutoStart -UT99AutoMatch -UT99TouchDefaultSmokeTest)
+  xcrun devicectl device process launch --device "$device_identifier" \
+    --terminate-existing \
+    com.ut99apple.client \
+    -- -UT99AutoStart -UT99AutoMatch -UT99TouchDefaultSmokeTest
+else
+  xcrun devicectl device process launch --device "$device_identifier" \
+    --terminate-existing \
+    com.ut99apple.client
 fi
-xcrun devicectl device process launch --device "$device_identifier" \
-  --terminate-existing \
-  com.ut99apple.client \
-  "${launch_args[@]}"
 echo "device_launch=passed"

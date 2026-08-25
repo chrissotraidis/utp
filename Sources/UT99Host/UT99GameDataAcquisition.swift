@@ -1,7 +1,16 @@
 import Foundation
 
 enum UT99AuthorizedGameData {
+    struct DownloadSource {
+        let displayName: String
+        let fileName: String
+        let expectedBytes: Int64
+        let expectedSHA256: String
+        let mirrors: [URL]
+    }
+
     static let sourcePageURL = URL(string: "https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/")!
+    static let patchPageURL = URL(string: "https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e")!
     static let termsURL = URL(string: "https://legal.epicgames.com/en-US/epicgames/tos")!
     static let expectedISOBytes: Int64 = 649_633_792
     static let expectedISOSHA256 = "e184984ca88f001c5ddd52035d76cd64e266e26c74975161b5ed72366c74704f"
@@ -11,6 +20,25 @@ enum UT99AuthorizedGameData {
         URL(string: "https://files3.oldunreal.net/UT_GOTY_CD1.ISO")!,
         URL(string: "https://archive.org/download/ut-goty/UT_GOTY_CD1.iso")!,
     ]
+    static let expectedPatchBytes: Int64 = 106_165_760
+    static let expectedPatchSHA256 = UT99RuntimeSupport.v469ePatchSHA256
+    static let patchMirrors = [
+        URL(string: "https://github.com/OldUnreal/UnrealTournamentPatches/releases/download/v469e/OldUnreal-UTPatch469e-Windows-x86.zip")!,
+    ]
+    static let gotyISO = DownloadSource(
+        displayName: "GOTY data",
+        fileName: "UT_GOTY_CD1.ISO",
+        expectedBytes: expectedISOBytes,
+        expectedSHA256: expectedISOSHA256,
+        mirrors: isoMirrors
+    )
+    static let v469ePatch = DownloadSource(
+        displayName: "v469e runtime",
+        fileName: "OldUnreal-UTPatch469e-Windows-x86.zip",
+        expectedBytes: expectedPatchBytes,
+        expectedSHA256: expectedPatchSHA256,
+        mirrors: patchMirrors
+    )
 }
 
 /// Downloads the exact GOTY image published by OldUnreal's own installers.
@@ -33,9 +61,17 @@ final class UT99GameDataDownload {
     }
 
     private let lock = NSLock()
+    let source: UT99AuthorizedGameData.DownloadSource
     private var task: URLSessionDownloadTask?
     private var cancelled = false
     private(set) var currentMirrorIndex = 0
+
+    init(source: UT99AuthorizedGameData.DownloadSource = UT99AuthorizedGameData.gotyISO) {
+        self.source = source
+    }
+
+    var expectedBytes: Int64 { source.expectedBytes }
+    var displayName: String { source.displayName }
 
     var progress: Progress? {
         lock.lock()
@@ -46,8 +82,8 @@ final class UT99GameDataDownload {
     var currentSourceHost: String {
         lock.lock()
         defer { lock.unlock() }
-        guard UT99AuthorizedGameData.isoMirrors.indices.contains(currentMirrorIndex) else { return "OldUnreal" }
-        return UT99AuthorizedGameData.isoMirrors[currentMirrorIndex].host ?? "OldUnreal"
+        guard source.mirrors.indices.contains(currentMirrorIndex) else { return "OldUnreal" }
+        return source.mirrors[currentMirrorIndex].host ?? "OldUnreal"
     }
 
     func start(
@@ -81,13 +117,13 @@ final class UT99GameDataDownload {
             completion(.failure(Error.cancelled))
             return
         }
-        guard UT99AuthorizedGameData.isoMirrors.indices.contains(index) else {
+        guard source.mirrors.indices.contains(index) else {
             completion(.failure(Error.allMirrorsFailed))
             return
         }
 
-        let source = UT99AuthorizedGameData.isoMirrors[index]
-        let request = URLRequest(url: source, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 300)
+        let sourceURL = source.mirrors[index]
+        let request = URLRequest(url: sourceURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 300)
         let nextTask = URLSession.shared.downloadTask(with: request) { [weak self] temporaryURL, _, error in
             guard let self else { return }
             self.lock.lock()
@@ -104,11 +140,11 @@ final class UT99GameDataDownload {
 
             do {
                 try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
-                let destination = destinationDirectory.appendingPathComponent("UT_GOTY_CD1.ISO")
+                let destination = destinationDirectory.appendingPathComponent(self.source.fileName)
                 try? FileManager.default.removeItem(at: destination)
                 try FileManager.default.moveItem(at: temporaryURL, to: destination)
                 let size = (try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? -1
-                guard size == UT99AuthorizedGameData.expectedISOBytes else {
+                guard size == self.source.expectedBytes else {
                     try? FileManager.default.removeItem(at: destination)
                     throw Error.invalidSize(size)
                 }
@@ -118,7 +154,7 @@ final class UT99GameDataDownload {
                     defer { self.lock.unlock() }
                     return self.cancelled
                 }.sha256
-                guard digest == UT99AuthorizedGameData.expectedISOSHA256 else {
+                guard digest == self.source.expectedSHA256 else {
                     try? FileManager.default.removeItem(at: destination)
                     throw Error.invalidDigest
                 }
@@ -146,9 +182,9 @@ final class UT99GameDataDownload {
     }
 }
 
-/// Minimal read-only ISO-9660/Joliet extractor for the four data directories
-/// in the exact, hash-verified OldUnreal GOTY image. It deliberately cannot
-/// extract arbitrary paths or executable content.
+/// Minimal read-only ISO-9660/Joliet extractor for game content plus an
+/// allowlisted non-native System payload in the exact, hash-verified OldUnreal
+/// GOTY image. It deliberately cannot extract arbitrary paths or native code.
 enum UT99ISO9660Extractor {
     struct Update {
         let currentFile: String
@@ -217,8 +253,33 @@ enum UT99ISO9660Extractor {
                 blockSize: blockSize,
                 joliet: descriptor.isJoliet,
                 cancellationRequested: cancellationRequested,
+                systemFilesOnly: false,
                 into: &pending
             )
+        }
+        guard let systemDirectory = rootRecords.first(where: {
+            $0.isDirectory &&
+                $0.name.caseInsensitiveCompare(UT99RuntimeSupport.systemDirectoryName) == .orderedSame
+        }) else {
+            throw Error.missingDataDirectory(UT99RuntimeSupport.systemDirectoryName)
+        }
+        try collectFiles(
+            in: systemDirectory,
+            relativeDirectory: UT99RuntimeSupport.systemDirectoryName,
+            handle: handle,
+            blockSize: blockSize,
+            joliet: descriptor.isJoliet,
+            cancellationRequested: cancellationRequested,
+            systemFilesOnly: true,
+            into: &pending
+        )
+        for requiredName in UT99RuntimeSupport.requiredSystemFileNames {
+            let requiredPath = "\(UT99RuntimeSupport.systemDirectoryName)/\(requiredName)"
+            guard pending.contains(where: {
+                $0.relativePath.caseInsensitiveCompare(requiredPath) == .orderedSame
+            }) else {
+                throw Error.missingDataDirectory(requiredPath)
+            }
         }
 
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -275,6 +336,7 @@ enum UT99ISO9660Extractor {
         blockSize: Int,
         joliet: Bool,
         cancellationRequested: () -> Bool,
+        systemFilesOnly: Bool,
         into pending: inout [PendingFile]
     ) throws {
         for child in try records(in: directory, handle: handle, blockSize: blockSize, joliet: joliet) {
@@ -290,9 +352,14 @@ enum UT99ISO9660Extractor {
                     blockSize: blockSize,
                     joliet: joliet,
                     cancellationRequested: cancellationRequested,
+                    systemFilesOnly: systemFilesOnly,
                     into: &pending
                 )
-            } else if !UT99DataImporter.shouldSkipContentFile(named: child.name) {
+            } else if systemFilesOnly {
+                guard UT99RuntimeSupport.shouldImportSystemFile(named: child.name) else { continue }
+                try UT99DataImporter.validateContentFileName(child.name)
+                pending.append(PendingFile(record: child, relativePath: relative))
+            } else if !UT99DataImporter.shouldSkipRetailContentFile(named: child.name) {
                 try UT99DataImporter.validateContentFileName(child.name)
                 pending.append(PendingFile(record: child, relativePath: relative))
             }

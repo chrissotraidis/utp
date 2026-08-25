@@ -13,12 +13,12 @@ private func near(_ lhs: CGFloat, _ rhs: CGFloat, tolerance: CGFloat = 0.02) -> 
 }
 
 private let actionIDs: Set<String> = [
-    "primaryFire", "alternateFire", "jump", "crouch", "use",
+    "primaryFire", "leftPrimaryFire", "alternateFire", "jump", "crouch", "use",
     "nextWeapon", "previousWeapon", "scoreboard", "pause",
 ]
 
 private func verifyContained(_ frames: [String: CGRect], in safe: CGRect, name: String) {
-    require(Set(frames.keys) == actionIDs.union(["move", "look"]), "\(name) semantic controls changed")
+    require(Set(frames.keys) == actionIDs.union(["move"]), "\(name) semantic controls changed")
     for (id, frame) in frames {
         // EctoPad's phone D-pad uses a 36pt reference scaled to the safe
         // 800x380 canvas; the 874x402 notched reference resolves to 34.02pt.
@@ -63,28 +63,38 @@ verifyMirror(right: tablet, left: tabletLeft, safe: tabletSafe, name: "iPad")
 require(near(tablet["move"]!.midX / tabletSafe.width, 0.1310395315), "iPad move X drifted from EctoPad")
 require(near((tablet["move"]!.midY - tabletSafe.minY) / tabletSafe.height, 0.7905894519), "iPad move Y drifted")
 require(tablet["move"]!.width == 172, "iPad movement stick size drifted")
-require(tablet["look"]!.width == 112, "iPad aim stick size drifted")
 require(tablet["primaryFire"]!.width == 104, "iPad FIRE hierarchy drifted")
+require(tablet["leftPrimaryFire"]!.midX < tabletSafe.midX, "iPad duplicate FIRE left the movement side")
 require(tablet["alternateFire"]!.width == 76, "iPad ALT hierarchy drifted")
 require(tablet["jump"]!.width == 62 && tablet["crouch"]!.width == 62,
         "iPad utility button hierarchy drifted")
-require(tablet["pause"]!.width == 116 && tablet["pause"]!.height == 62,
+require(tablet["pause"]!.width == 134 && tablet["pause"]!.height == 62,
         "iPad MENU pill drifted")
 
 // The reference's physical A/B/X/Y cluster overlaps visually. UT maps these to
 // independent touch actions, so every visible right-side control must own an
 // unambiguous hit region.
-let rightControls = ["look", "primaryFire", "alternateFire", "jump", "crouch"]
+let rightControls = ["primaryFire", "alternateFire", "jump", "crouch", "pause"]
 for (offset, firstKey) in rightControls.enumerated() {
     for secondKey in rightControls.dropFirst(offset + 1) {
         require(!tablet[firstKey]!.intersects(tablet[secondKey]!),
                 "iPad right controls overlap: \(firstKey) / \(secondKey)")
     }
 }
-require(tablet["primaryFire"]!.midY < tablet["look"]!.midY,
-        "iPad FIRE must remain above the aim stick")
 require(tablet["alternateFire"]!.midX < tablet["primaryFire"]!.midX,
         "iPad ALT must remain left of FIRE")
+require((tablet["pause"]!.midY - tabletSafe.minY) / tabletSafe.height < 0.15,
+        "iPad MENU must remain outside the right-thumb look area")
+let tabletLookArea = CGRect(
+    x: tabletSafe.midX,
+    y: tabletSafe.minY + tabletSafe.height * 0.42,
+    width: tabletSafe.width * 0.26,
+    height: tabletSafe.height * 0.58
+)
+for key in ["primaryFire", "alternateFire", "jump", "crouch", "pause"] {
+    require(!tablet[key]!.intersects(tabletLookArea),
+            "iPad \(key) intrudes into the lower-right look area")
+}
 
 let d = tablet["scoreboard"]!.width
 require(near(tablet["scoreboard"]!.midX, tablet["use"]!.midX), "D-pad vertical axis split")
@@ -97,6 +107,20 @@ require(tablet["nextWeapon"]!.width == d && tablet["previousWeapon"]!.width == d
         "D-pad weapon controls lost their compact hierarchy")
 
 let phoneSafe = CGRect(x: 59, y: 0, width: 756, height: 381)
+let phoneRenderer = UT99TouchLayoutGeometry.rendererFrame(
+    canvasSize: CGSize(width: 844, height: 390),
+    safeInsets: UT99TouchInsets(top: 0, left: 47, bottom: 21, right: 47),
+    isPhone: true
+)
+require(phoneRenderer == CGRect(x: 47, y: 4, width: 750, height: 365),
+        "iPhone renderer did not clear safe edges")
+let tabletRenderer = UT99TouchLayoutGeometry.rendererFrame(
+    canvasSize: CGSize(width: 1180, height: 820),
+    safeInsets: UT99TouchInsets(top: 20, left: 0, bottom: 20, right: 0),
+    isPhone: false
+)
+require(tabletRenderer == CGRect(x: 0, y: 0, width: 1180, height: 820),
+        "iPad renderer must remain full-bleed")
 let phone = UT99EctoPadReferenceLayout.phoneFrames(
     safeRect: phoneSafe,
     profileScale: 1,
@@ -110,8 +134,8 @@ let phoneLeft = UT99EctoPadReferenceLayout.phoneFrames(
 verifyContained(phone, in: phoneSafe, name: "iPhone")
 verifyContained(phoneLeft, in: phoneSafe, name: "iPhone southpaw")
 verifyMirror(right: phone, left: phoneLeft, safe: phoneSafe, name: "iPhone")
-require(phone["move"]!.width > phone["look"]!.width, "phone stick hierarchy collapsed")
 require(phone["primaryFire"]!.width > phone["alternateFire"]!.width, "phone fire hierarchy collapsed")
+require(phone["leftPrimaryFire"]!.midX < phoneSafe.midX, "phone duplicate FIRE left the movement side")
 
 // Preserve coverage for the generic custom-placement collision solver used by
 // imported profiles and editor scaling.
@@ -128,4 +152,4 @@ let fitted = UT99TouchLayoutGeometry.fittedScale(
 let customFrames = UT99TouchLayoutGeometry.frames(scale: fitted, controls: customControls)
 require(UT99TouchLayoutGeometry.collisionPairs(in: customFrames).isEmpty, "custom placement solver regressed")
 
-print("UT99 reference touch geometry PASS controls=11 tablet=true phone=true southpaw=true")
+print("UT99 reference touch geometry PASS controls=11 tablet=true phone=true southpaw=true lookArea=screen")

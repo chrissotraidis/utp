@@ -15,7 +15,11 @@ func profile(named name: String = "Arena") -> UT99TouchProfileDocument {
         configuration: .standard,
         lookSensitivity: 1.25,
         invertLookY: false,
-        placements: ["primaryFire": .init(x: 0.9, y: 0.7, scale: 1.1)]
+        placements: [
+            "primaryFire": .init(x: 0.9, y: 0.7, scale: 1.1),
+            "menuSelect": .init(x: 0.86, y: 0.62, scale: 1.0),
+            "menuBack": .init(x: 0.86, y: 0.18, scale: 1.0)
+        ]
     )
 }
 
@@ -54,6 +58,8 @@ struct TouchProfileStoreTests {
         try expect(safe.opacity == 1 && safe.globalScale == 0.75 && safe.lookSensitivity == 3, "clamp scalar settings")
         try expect(safe.configuration.hiddenActions == ["jump"], "filter hidden actions")
         try expect(safe.placements["jump"] == .init(x: 0.02, y: 0.96, scale: 1.5), "clamp placement")
+        try expect(safe.placements["menuSelect"] != nil && safe.placements["menuBack"] != nil,
+                   "menu controls persist independently")
 
         let inserted = try UT99TouchProfileStore.upsert(profile(), in: defaults)
         let replaced = try UT99TouchProfileStore.upsert(profile(named: "arena"), in: defaults)

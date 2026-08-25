@@ -8,6 +8,15 @@
       "license": "Upstream release terms; user-supplied proprietary game/runtime input",
       "ships_in_app": false,
       "purpose": "Local feasibility audit reference"
+    },
+    {
+      "name": "OldUnreal Unreal Tournament v469e Windows ZIP",
+      "version": "v469e",
+      "url": "https://github.com/OldUnreal/UnrealTournamentPatches/releases/download/v469e/OldUnreal-UTPatch469e-Windows-x86.zip",
+      "sha256": "8c94eb7e990f5480b1fb7bcb1bd15c2512da134dbf01bfa16e7f99f0a8a0ee86",
+      "license": "Upstream release terms; downloaded after user consent as proprietary runtime input",
+      "ships_in_app": false,
+      "purpose": "Hash-pinned platform-neutral v469e runtime and localization acquisition"
     }
   ],
   "dependencies": [

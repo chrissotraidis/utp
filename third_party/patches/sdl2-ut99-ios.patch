@@ -1,8 +1,48 @@
+diff --git a/src/events/SDL_keyboard.c b/src/events/SDL_keyboard.c
+--- a/src/events/SDL_keyboard.c
++++ b/src/events/SDL_keyboard.c
+@@ -1068,6 +1068,35 @@ int SDL_SendKeyboardText(const char *text)
+     return posted;
+ }
+-
++
++/*
++ * UT99 Apple host integration: the transparent UIKit host owns hardware and
++ * software keyboard focus while SDL owns the legacy engine event queue. Go
++ * through SDL's real keyboard state machine instead of constructing partial
++ * SDL_Event byte buffers in Swift; UWindow depends on that state for edit-box
++ * characters even though ordinary gameplay bindings accept queued key events.
++ */
++DECLSPEC int SDLCALL SDL_UT99SendKeyboardText(const char *text)
++{
++    const unsigned char *cursor;
++    int posted = 0;
++    if (!text) {
++        return -1;
++    }
++    for (cursor = (const unsigned char *)text; *cursor; ++cursor) {
++        if (*cursor < 0x80) {
++            posted |= SDL_SendKeyboardUnicodeKey(*cursor);
++        }
++    }
++    posted |= SDL_SendKeyboardText(text);
++    return posted;
++}
++
++DECLSPEC int SDLCALL SDL_UT99SendHardwareKey(int pressed, int scancode, int keycode)
++{
++    return SDL_SendKeyboardKeyAndKeycode(pressed ? SDL_PRESSED : SDL_RELEASED,
++                                         (SDL_Scancode)scancode, (SDL_Keycode)keycode);
++}
++
+ int SDL_SendEditingText(const char *text, int start, int length)
+ {
+     SDL_Keyboard *keyboard = &SDL_keyboard;
 diff --git a/src/events/SDL_mouse.c b/src/events/SDL_mouse.c
 index a9a89f6..f4d5ce4 100644
 --- a/src/events/SDL_mouse.c
 +++ b/src/events/SDL_mouse.c
-@@ -861,6 +861,40 @@ int SDL_SendMouseButton(SDL_Window *window, SDL_MouseID mouseID, Uint8 state, Ui
+@@ -861,6 +861,52 @@ int SDL_SendMouseButton(SDL_Window *window, SDL_MouseID mouseID, Uint8 state, Ui
      return SDL_PrivateSendMouseButton(window, mouseID, state, button, -1);
  }
  
@@ -13,8 +53,9 @@ index a9a89f6..f4d5ce4 100644
 + * events and SDL_GetMouseState (including UWindow) see one coherent input.
 + * `pressed` is -1 for motion, 0 for release, and 1 for press.
 + */
-+DECLSPEC int SDLCALL SDL_UT99SendMousePointer(SDL_Window *window, int x, int y, int pressed)
++DECLSPEC int SDLCALL SDL_UT99SendMousePointer(SDL_Window *window, int x, int y, int pressed, int anchor)
 +{
++    SDL_Mouse *mouse = SDL_GetMouse();
 +    int posted;
 +
 +    if (!window) {
@@ -28,10 +69,21 @@ index a9a89f6..f4d5ce4 100644
 +        SDL_SetMouseFocus(window);
 +    }
 +
-+    /* UIKit and SDL's iOS window both use logical points. Retain the focused
-+       window so the event carries the renderer window ID and remains clamped
-+       to the same logical surface UWindow draws into. */
-+    posted = SDL_SendMouseMotion(window, 0, SDL_FALSE, x, y);
++    /* UWindow, SDL_GetMouseState, and UIKit use SDL window points here.
++       Retina drawable pixels and ConfiguredGUIScale remain irrelevant. */
++    posted = 0;
++    if (anchor) {
++        /* UWindow owns a relative software cursor that can drift away from
++           SDL's absolute mouse state. Emit one deliberately oversized delta
++           to clamp that cursor at the upper-left, then move by the requested
++           logical point. The Apple profile compensates SDLDrv's Retina axis
++           scale, making the second delta land point-for-point. */
++        mouse->has_position = SDL_TRUE;
++        mouse->last_x = window->w * 4;
++        mouse->last_y = window->h * 4;
++        posted |= SDL_PrivateSendMouseMotion(window, 0, SDL_FALSE, 0, 0);
++    }
++    posted |= SDL_PrivateSendMouseMotion(window, 0, SDL_FALSE, x, y);
 +    if (pressed >= 0) {
 +        posted |= SDL_SendMouseButton(window, 0,
 +                                      pressed ? SDL_PRESSED : SDL_RELEASED,
@@ -149,23 +201,63 @@ index 7c17d8d..15281f5 100644
          }
      }
  }
+diff --git a/src/video/uikit/SDL_uikitviewcontroller.h b/src/video/uikit/SDL_uikitviewcontroller.h
+index db44aa1..e26d8aa 100644
+--- a/src/video/uikit/SDL_uikitviewcontroller.h
++++ b/src/video/uikit/SDL_uikitviewcontroller.h
+@@ -27,10 +27,6 @@
+ #include "SDL_touch.h"
+-
+-#if TARGET_OS_TV
+-#import <GameController/GameController.h>
+-#define SDLRootViewController GCEventViewController
+-#else
+-#define SDLRootViewController UIViewController
+-#endif
+-
++
++#import <GameController/GameController.h>
++#define SDLRootViewController GCEventViewController
++
+ @interface SDLUITextField : UITextField
 diff --git a/src/video/uikit/SDL_uikitviewcontroller.m b/src/video/uikit/SDL_uikitviewcontroller.m
 index dee4b19..bee2c37 100644
 --- a/src/video/uikit/SDL_uikitviewcontroller.m
 +++ b/src/video/uikit/SDL_uikitviewcontroller.m
-@@ -28,6 +28,11 @@
+@@ -28,4 +28,18 @@
  #include "../../events/SDL_events_c.h"
- 
+-
++
  #include "SDL_uikitviewcontroller.h"
 +
-+static CGRect UT99AspectGameFrame(CGRect hostBounds)
++static CGRect UT99AspectGameFrame(UIWindow *hostWindow)
 +{
-+    return hostBounds;
++    CGRect hostBounds = hostWindow.bounds;
++    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPhone) {
++        return hostBounds;
++    }
++    UIEdgeInsets insets = hostWindow.safeAreaInsets;
++    insets.top = MAX(insets.top, 4.0);
++    insets.left = MAX(insets.left, 4.0);
++    insets.bottom = MAX(insets.bottom, 4.0);
++    insets.right = MAX(insets.right, 4.0);
++    return UIEdgeInsetsInsetRect(hostBounds, insets);
 +}
  #include "SDL_uikitmessagebox.h"
- #include "SDL_uikitevents.h"
- #include "SDL_uikitvideo.h"
-@@ -225,10 +230,52 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
+@@ -99,4 +104,11 @@ - (instancetype)initWithSDLWindow:(SDL_Window *)_window
+     if (self = [super initWithNibName:nil bundle:nil]) {
+         self.window = _window;
+-
++
++#if !TARGET_OS_TV
++        /* The SDL renderer owns the key window on iOS. It must also be a
++         * GCEventViewController or iPadOS converts Xbox input into UIKit
++         * navigation presses instead of publishing the extended profile. */
++        self.controllerUserInteractionEnabled = NO;
++#endif
++
+ #ifdef SDL_IPHONE_KEYBOARD
+@@ -225,10 +237,52 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
  
  - (void)viewDidLayoutSubviews
  {
@@ -199,7 +291,7 @@ index dee4b19..bee2c37 100644
 +    // projection are rendered at the scene's real point resolution instead
 +    // of being rasterized at 512x384 and enlarged by the Metal view.
 +    if (attachedHostWindow) {
-+        CGRect gameFrame = UT99AspectGameFrame(attachedHostWindow.bounds);
++        CGRect gameFrame = UT99AspectGameFrame(attachedHostWindow);
 +        self.view.transform = CGAffineTransformIdentity;
 +        self.view.frame = gameFrame;
 +        self.view.bounds = CGRectMake(0.0, 0.0, gameFrame.size.width, gameFrame.size.height);
@@ -368,4 +460,3 @@ index 0e0ea05..3f5b4af 100644
      }
  
      /* Integer truncation of fractional values matches SDL_uikitmetalview and
-
