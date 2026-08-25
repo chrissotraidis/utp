@@ -138,6 +138,12 @@ if [[ "$mode" == "public" ]]; then
     echo "package_local=failed reason=development_team_identifier_archived" >&2
     exit 5
   fi
+  local_user="$(id -un)"
+  printf -v local_home '/%s/%s/' Users "$local_user"
+  if rg -a -q "$local_home" "$stage/Payload/UT99Apple.app"; then
+    echo "package_local=failed reason=local_build_path_archived" >&2
+    exit 5
+  fi
 fi
 
 packaged_app="$stage/Payload/UT99Apple.app"

@@ -25,6 +25,8 @@ rg -q 'reason=signing_metadata_archived' tools/package_local_ipa.sh
 rg -q 'codesign --remove-signature' tools/package_local_ipa.sh
 rg -q 'reason=embedded_code_signature_archived' tools/package_local_ipa.sh
 rg -q 'reason=development_team_identifier_archived' tools/package_local_ipa.sh
+rg -q 'reason=local_build_path_archived' tools/package_local_ipa.sh
+rg -q -- '-ffile-prefix-map=' Makefile
 rg -q 'contains_user_game_data:false' tools/package_local_ipa.sh
 rg -q 'runtime_jit_required:false' tools/package_local_ipa.sh
 rg -q 'zip -X -q -r' tools/package_local_ipa.sh
