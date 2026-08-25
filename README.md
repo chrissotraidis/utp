@@ -10,14 +10,14 @@
   <a href="https://github.com/chrissotraidis/utp/actions/workflows/public-safety.yml"><img alt="Public repository safety" src="https://github.com/chrissotraidis/utp/actions/workflows/public-safety.yml/badge.svg"></a>
   <img alt="iOS and iPadOS 17 or later" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-17%2B-0A84FF?logo=apple">
   <img alt="FruCoRe Metal renderer" src="https://img.shields.io/badge/renderer-FruCoRe%20Metal-5E5CE6">
-  <img alt="Physical-device validation pending" src="https://img.shields.io/badge/physical%20device-validation%20pending-FF9F0A">
+  <img alt="Tested on physical iPhone and iPad" src="https://img.shields.io/badge/physical%20iPhone%20%2F%20iPad-tested-30D158">
   <img alt="No public binary" src="https://img.shields.io/badge/public%20binary-not%20available-8E8E93">
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
 ![Unreal Tournament 99 gameplay in UTP with the Flak Cannon visible](docs/readme/utp-gameplay-flak-cannon.png)
 
-<p align="center"><em>Current UTP gameplay build. Physical-device acceptance remains pending.</em></p>
+<p align="center"><em>Current UTP gameplay build, tested extensively on physical iPhone and iPad.</em></p>
 
 <p align="center">
   <a href="#release-status">Status</a> ·
@@ -42,20 +42,21 @@ binaries, a generated engine image, signing material, or a downloadable IPA.
 Those boundaries are enforced by [`make public-check`](#repository-safety).
 
 > [!IMPORTANT]
-> This is a developer and preservation project, not a finished consumer
-> release. Simulator gameplay is meaningful engineering evidence, but the
-> signed physical-device path, hardware input/audio/performance matrix, and
-> permission to distribute the transformed runtime are still open gates.
+> UTP builds, signs, installs, launches, and plays on physical iPhone and iPad.
+> Touch gameplay, audio, and controller play have been exercised on real
+> hardware. A public download is not available yet because distribution rights,
+> packaging, and the Apple delivery channel are separate release tasks—not
+> because the game is waiting to work on a device.
 
 ## Release status
 
 | Surface | Current status | Meaning |
 |---|---|---|
 | Source repository | **Public-release preparation** | The source tree is being hardened and documented; no public source release tag has been created. |
-| iPhone/iPad Simulator | **Development path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
-| Physical iPhone/iPad | **Not yet verified** | Device signing, first frame, touch-only play, audio, controllers, lifecycle, and sustained performance remain hardware gates. |
+| Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
+| iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
 | TestFlight / public IPA | **Not available** | No public binary or general install path exists. A local diagnostic IPA is not a consumer release. |
-| App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and physical acceptance remain open. |
+| App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and release operations remain open. |
 
 The authoritative gate ledger is [`docs/STATUS.md`](docs/STATUS.md). The
 requirement-by-requirement view is
@@ -72,6 +73,9 @@ Current repository evidence includes:
   runtime JIT;
 - a UIKit host with a full-bleed FruCoRe Metal surface on iPhone and iPad
   Simulator targets;
+- repeated physical-iPhone and physical-iPad builds with successful signing,
+  installation, launch, gameplay, touch input, and audio;
+- usable touch combat and physical controller play on real hardware;
 - touch movement, aim, FIRE, ALT, USE, JUMP, DUCK, PREV/NEXT, SCORE, and the
   original Unreal menu;
 - editable touch layout, opacity, handedness, saved profiles, diagnostics,
@@ -85,8 +89,11 @@ Current repository evidence includes:
 - a final-package iPhone Simulator session that held one engine process for
   more than 30 minutes and survived three Home/reopen cycles.
 
-These are not claims of physical-device acceptance. See
-[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for the remaining limits.
+The game itself works on physical iPhone and iPad. Narrower known issues and
+follow-up checks—such as particular controller hot-connect paths, pointer
+calibration, UI scaling, shadow fidelity, audio-route interruption, and formal
+release packaging—are tracked in
+[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## Getting the game files
 
@@ -97,20 +104,22 @@ package contain no Epic game data, disc image, or prepared game installation.
 
 - **Official OldUnreal route:** the
   [OldUnreal full-game installer page](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/)
-  is the recommended source of truth. OldUnreal currently says its installers
-  download the original Unreal Tournament 99 GOTY disc image from its own file
-  servers, use Archive.org only as a fallback, and apply the latest OldUnreal
-  patch.
+  is the recommended source of truth. OldUnreal currently makes the full game
+  available online through free-to-download installers. Those installers
+  download the original Unreal Tournament 99 GOTY disc image from OldUnreal's
+  file servers, use Archive.org only as a fallback, and apply the latest
+  OldUnreal patch.
 - **An existing copy:** if you already have a user-authorized GOTY installation,
   UTP can import its supported data from a folder or ZIP.
 
-You do not buy game files from UTP, and UTP does not redistribute or relicense
-them. The current OldUnreal download route is provided under OldUnreal's and
-the rights holders' terms; follow their page for current availability.
+In practical terms, this means you can obtain the game data online through the
+established OldUnreal route without buying a separate copy from UTP. UTP is
+simply using that path: it does not mirror, sell, or relicense the game. Epic's
+terms and OldUnreal's current instructions still apply.
 
 ### How does setup work inside UTP?
 
-The current development build presents two choices on first launch:
+The current UTP build presents two choices on first launch:
 
 1. **Get Game Data** explains the source, approximate size, terms, and
    destination before consent. It verifies the exact installer image by size
@@ -122,9 +131,9 @@ The current development build presents two choices on first launch:
 
 UTP keeps only the supported `Maps`, `Music`, `Sounds`, and `Textures` data in
 its app container. It does not import the desktop `System` directory or run
-native code from imported content. The acquisition flow is ready for physical
-testing, but enabling it in a publicly distributed binary still requires
-written permission and Apple-channel review. See
+native code from imported content. Enabling the automatic acquisition path in
+a publicly distributed binary still requires written permission and
+Apple-channel review. See
 [`docs/DATA_COMPATIBILITY.md`](docs/DATA_COMPATIBILITY.md) and
 [`docs/DISTRIBUTION_AND_ONBOARDING.md`](docs/DISTRIBUTION_AND_ONBOARDING.md).
 
@@ -140,9 +149,10 @@ The touch interface is designed as a full-bleed landscape overlay:
 - **Customization:** opacity, scale, handedness, visibility, drag/pinch layout
   editing, saved profiles, and restore defaults.
 
-Native GameController, hardware-keyboard, and pointer bridges are included in
-the device target. Their model-specific physical behavior is not accepted yet;
-do not read compiled support as completed hardware validation.
+Touch gameplay and Xbox controller play have been exercised on physical
+hardware. Native GameController, hardware-keyboard, and pointer bridges are
+included in the device target; narrower hot-connect, printable-keyboard,
+mouse-button, and pointer-calibration cases remain tracked independently.
 
 ## Build and test
 
@@ -222,11 +232,11 @@ The exact technical and stop-gate rationale is in
 
 ## Online play
 
-Yes—the current Simulator build uses the original v469 server browser and has
-connected to real community Unreal Tournament servers. It has populated live
-listings, joined unmodified servers, downloaded data-only packages, reached
-player possession, exercised combat and respawn, survived a natural map
-transition, and disconnected through the original menu.
+Yes—UTP uses the original v469 server browser and protocol, and the current
+build has connected to real community Unreal Tournament servers. It has
+populated live listings, joined unmodified servers, downloaded data-only
+packages, reached player possession, exercised combat and respawn, survived a
+natural map transition, and disconnected through the original menu.
 
 <details>
 <summary><strong>See the original server browser running in UTP</strong></summary>
@@ -238,10 +248,10 @@ browser populated with live community listings. Server names, availability,
 player counts, and ping values change over time.
 </details>
 
-Public launch copy must wait for the physical-device networking gate: device
-Wi-Fi/DNS/UDP, original-browser play, package download, chat observed by a
-second player, background behavior, and clean reconnect. The exact boundary
-is tracked in [`docs/NETWORK_COMPATIBILITY.md`](docs/NETWORK_COMPATIBILITY.md).
+The original-protocol server path is proven. Physical-device networking edge
+cases, observer-confirmed chat, background behavior, and clean reconnect remain
+narrow follow-up checks tracked in
+[`docs/NETWORK_COMPATIBILITY.md`](docs/NETWORK_COMPATIBILITY.md).
 
 ## Repository safety
 
@@ -264,19 +274,21 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <details>
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
-No public binary, TestFlight, App Store listing, or general IPA install is
-available. The current repository is a developer build and evidence base. A
-local diagnostic IPA is not a public consumer release.
+UTP already works on physical iPhone and iPad, and developers can build and
+sign the current source. What is not available yet is a general public IPA,
+TestFlight, or App Store installation. That distribution gap is separate from
+the game itself working.
 </details>
 
 <details>
 <summary><strong>Is Unreal Tournament 99 free, and where do I get the files?</strong></summary>
 
-UTP does not sell or bundle Unreal Tournament. OldUnreal currently provides
-[full-game installers](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/)
-that download the original GOTY disc image from its servers and apply the
-latest patch. Use OldUnreal's page for the current download and terms. UTP does
-not treat that availability as a license to redistribute the game itself.
+For practical purposes, the required game is currently available online at no
+cost through OldUnreal's
+[full-game installers](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/).
+They download the original GOTY disc image and apply the latest OldUnreal patch.
+UTP uses that established source path; it does not bundle or relicense the game,
+and Epic's terms still apply.
 </details>
 
 <details>
@@ -291,55 +303,54 @@ repository and distributable app remain game-data-free.
 <details>
 <summary><strong>Does it require a jailbreak or JIT?</strong></summary>
 
-The architecture is explicitly designed for stock iOS signing without a
-runtime JIT or downloaded executable code. The package and static audit paths
-support that design, but a signed physical-device run remains the gate before
-calling the complete runtime path proven.
+No. UTP runs on normally signed, stock iOS and iPadOS without a jailbreak, JIT,
+or downloaded executable code. That path has been exercised on physical iPhone
+and iPad hardware.
 </details>
 
 <details>
 <summary><strong>Which devices are supported?</strong></summary>
 
-The project targets arm64 iPhone and iPad on iOS/iPadOS 17 or later. Current
-runtime acceptance is Simulator-only. No physical model should be advertised
-as supported until its first-frame, touch, audio, lifecycle, and performance
-checks pass.
+UTP targets arm64 iPhone and iPad on iOS/iPadOS 17 or later and has been tested
+extensively on physical devices in both families. Exact model-specific or
+peripheral issues are tracked separately; they do not change the fact that the
+game installs, launches, and plays on real iPhone and iPad hardware.
 </details>
 
 <details>
 <summary><strong>Do controllers, keyboards, and mice work?</strong></summary>
 
-The native controller, hardware-keyboard, and pointer bridges compile into the
-device target. Physical mapping, reconnect, rumble, motion, mouse buttons,
-keyboard traversal, and mixed-input behavior still require hardware evidence.
+Touch gameplay and Xbox controller play work on physical hardware. The native
+controller, hardware-keyboard, and pointer bridges are included in the device
+target. Specific hot-connect, keyboard text-entry, mouse-button, and pointer
+calibration cases remain active follow-ups.
 </details>
 
 <details>
 <summary><strong>Does UTP connect to real Unreal Tournament servers?</strong></summary>
 
-Yes in the current Simulator evidence. UTP uses the original v469e server
-browser and protocol, and it has joined real community servers through the
-original menu. Physical iPhone/iPad networking and observer-confirmed chat
-remain release gates.
+Yes. UTP uses the original v469e server browser and protocol, and the current
+build has joined real community servers through the original menu. The
+remaining network work is limited to narrower device edge cases and
+observer-confirmed chat—not whether the original server path works.
 </details>
 
 <details>
 <summary><strong>Why is there no public IPA?</strong></summary>
 
-A raw diagnostic IPA is not a universal iOS installer. More importantly,
-physical acceptance, transformed-runtime distribution permission, acquisition
-permission, privacy work, signing operations, and the chosen Apple delivery
-channel are unresolved. TestFlight is the intended first external beta path
-if those gates close.
+A raw development IPA is not a universal iOS installer. UTP already works on
+physical hardware; the remaining blockers are transformed-runtime distribution
+permission, acquisition permission for a public binary, privacy/release
+operations, and the chosen Apple delivery channel. TestFlight is the intended
+first external beta path if those gates close.
 </details>
 
 <details>
 <summary><strong>Will updates preserve imported data?</strong></summary>
 
 The importer uses a transactional install boundary and deterministic rollback
-tests pass. In-place physical app updates and real Files-provider preservation
-must still be accepted before any public guarantee is made. Back up user data
-before replacing development builds.
+tests pass, and physical development builds have been updated in place
+repeatedly. Continue backing up imported data while UTP remains pre-release.
 </details>
 
 <details>
