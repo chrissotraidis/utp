@@ -34,7 +34,7 @@ This ledger applies the completion checklist in `UT99_Agent_Goal_Loop.md` withou
 | Direct connect and unmodified multiplayer | PARTIAL | The current native host sheet validates and normalizes a player-entered address, then hands it to v469e; live evidence records DNS, 469 challenge, download managers, welcome, remote map load, and visible session. Full movement/respawn/chat/map-transition sequence and physical networking remain. |
 | Performance and stability | PHYSICAL-ONLY BLOCKED | FruCoRe presentation instrumentation works and Simulator metrics are recorded; physical FPS/pacing/thermals/memory/long-run evidence is required. |
 | Local IPA packaging | PARTIAL | Diagnostic ad-hoc IPA and manifest pass integrity/no-game-data checks. Installable development-signed IPA is blocked by signing identity/team. |
-| Clean-checkout reproduction | LOCAL ACTIONABLE | Bootstrap is now deterministic, but this working tree is largely untracked relative to commit `65b0066`; a meaningful clean-checkout proof requires first establishing a complete tracked repository snapshot. No user changes were reset or overwritten. |
+| Clean-checkout reproduction | PROVEN | Commit `e61023d` was cloned without a shared worktree, freshly bootstrapped, tested, prepared as a macOS baseline, and rebuilt into a verified real-FMOD iPhoneOS package. SDL changes are a tracked patch applied to a generated copy; pristine references remain untouched. `docs/evidence/reproducibility/2026-08-24-clean-checkout/RESULT.md` |
 | Runtime discipline | PROVEN | Exactly one iPad Simulator is booted for the active final runtime; EctoPad reference checkout is pristine at `461de17f549d98742bc3b2d031156f79ab3eaa9d`. |
 
 ## Current priority
@@ -47,4 +47,4 @@ DEVELOPMENT_TEAM=YOURTEAMID make device-run
 DEVELOPMENT_TEAM=YOURTEAMID make verify-device
 ```
 
-Until device/signing prerequisites exist, locally actionable work must not be described as physical-device completion. The most valuable remaining local items are Steam-origin importer evidence when a user-owned source becomes available, browser-driven join/session coverage, warning cleanup, and proving a fully tracked clean-checkout snapshot.
+Until device/signing prerequisites exist, locally actionable work must not be described as physical-device completion. The most valuable remaining local items are Steam-origin importer evidence when a user-owned source becomes available, browser-driven join/session coverage, and warning cleanup.

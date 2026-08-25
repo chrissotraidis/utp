@@ -3,6 +3,7 @@
 - [G1 audit — 2026-08-23](engine-startup/2026-08-23-g1-audit/RESULT.md)
 - [Complete G1 native-image/dependency audit — 2026-08-24](engine-startup/2026-08-24-g1-complete-native-audit/RESULT.md)
 - [macOS v469e baseline — 2026-08-23](macos-baseline/2026-08-23-v469e/RESULT.md)
+- [Clean-checkout source and iPhoneOS package reproduction — 2026-08-24](reproducibility/2026-08-24-clean-checkout/RESULT.md)
 - [iOS host shell — 2026-08-23](ios-shell/2026-08-23-shell/RESULT.md)
 - [Physical-device readiness tooling — 2026-08-24](ios-shell/2026-08-24-device-readiness/RESULT.md)
 - [G2 host Metal and aggregate smoke — 2026-08-24](ios-shell/2026-08-24-g2-metal-smoke/RESULT.md)

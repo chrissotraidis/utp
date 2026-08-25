@@ -330,3 +330,10 @@
 - **Decision:** Create the destination explicitly and merge `build/UT99Data/.` into it for every device and Simulator package target. Reject `UT99Data/UT99Data` in `verify_ios_package.sh` so repeated builds cannot silently ship nested runtime data.
 - **Evidence:** `Makefile`; `tools/verify_ios_package.sh`; `Tests/test_local_ipa_packaging.sh`; rebuilt real-FMOD iPhoneOS and Simulator packages both pass verification.
 - **Reversal condition:** Runtime data moves to an asset catalog, on-demand resource, or external import-only model; preserve idempotent assembly and an explicit malformed-layout rejection.
+
+## 2026-08-24 — Generate patched SDL from a pristine pinned checkout
+
+- **Context:** The first independent clean-checkout test failed because five required SDL/UIKit changes existed only as edits inside ignored `ref/SDL2`. That made the working build impossible to reproduce from tracked source and violated the rule that references remain unmodified.
+- **Decision:** Store the complete SDL delta in `third_party/patches/sdl2-ut99-ios.patch`. Require the exact pinned, clean SDL commit; copy it to ignored `build/sources/SDL2-UT99`; apply the tracked patch there; stamp its SHA-256; and build every SDL device/Simulator target from that generated copy. Reject dirty or unexpected reference checkouts and quarantine stale generated copies outside the repository before regeneration.
+- **Evidence:** `tools/prepare_sdl2_source.sh`; `third_party/patches/sdl2-ut99-ios.patch`; `Tests/test_ios_build_path.sh`; `docs/evidence/reproducibility/2026-08-24-clean-checkout/RESULT.md`.
+- **Reversal condition:** SDL is replaced or the changes are accepted upstream; preserve exact source pinning, a pristine reference checkout, deterministic transformation, and clean-checkout package reproduction.
