@@ -174,6 +174,7 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
     private let weaponRailDivider = UIView()
     private var moveAnchor: CGPoint?
     private var pointerLastLocation: CGPoint?
+    private var accessibilityMovement = CGPoint.zero
     private var buttons: [Action: UT99TouchActionButton] = [:]
     private var activeActions = Set<Action>()
     private var placements: [String: UT99TouchPlacement] = [:]
@@ -289,7 +290,14 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
             let glyphSide = min(22, max(14, thumbDiameter * 0.34))
             moveGlyph.bounds = CGRect(x: 0, y: 0, width: glyphSide, height: glyphSide)
             moveGlyph.center = CGPoint(x: moveThumb.bounds.midX, y: moveThumb.bounds.midY)
-            if moveAnchor == nil { moveThumb.transform = .identity }
+            if moveAnchor == nil {
+                moveThumb.transform = stickThumbTransform(
+                    value: accessibilityMovement,
+                    surface: movePad,
+                    thumb: moveThumb,
+                    invertY: true
+                )
+            }
         } else {
             let thumbDiameter = resolvedDiameter * 0.42
             lookThumb.bounds = CGRect(x: 0, y: 0, width: thumbDiameter, height: thumbDiameter)
@@ -312,6 +320,18 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
 
         movePad.backgroundColor = .clear
         movePad.isOpaque = false
+        movePad.isAccessibilityElement = true
+        movePad.accessibilityLabel = "Movement"
+        movePad.accessibilityValue = "Stopped"
+        movePad.accessibilityHint = "Choose a direction from Actions. Choose Stop movement to release it."
+        movePad.accessibilityIdentifier = "ut99.touch.move"
+        movePad.accessibilityCustomActions = [
+            movementAccessibilityAction(name: "Move forward", value: CGPoint(x: 0, y: 1)),
+            movementAccessibilityAction(name: "Move backward", value: CGPoint(x: 0, y: -1)),
+            movementAccessibilityAction(name: "Strafe left", value: CGPoint(x: -1, y: 0)),
+            movementAccessibilityAction(name: "Strafe right", value: CGPoint(x: 1, y: 0)),
+            movementAccessibilityAction(name: "Stop movement", value: .zero)
+        ]
         addSubview(movePad)
 
         // Match EctoPad's fixed, always-visible movement stick. A fixed origin
@@ -338,6 +358,17 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
 
         // EctoPad's yellow camera stick becomes UT's explicit AIM stick.
         lookSurface.backgroundColor = UIColor(red: 0.91, green: 0.66, blue: 0.08, alpha: 0.90)
+        lookSurface.isAccessibilityElement = true
+        lookSurface.accessibilityLabel = "Aim"
+        lookSurface.accessibilityValue = "Centered"
+        lookSurface.accessibilityHint = "Choose a direction from Actions to turn or look."
+        lookSurface.accessibilityIdentifier = "ut99.touch.aim"
+        lookSurface.accessibilityCustomActions = [
+            aimAccessibilityAction(name: "Look up", value: CGPoint(x: 0, y: -0.35)),
+            aimAccessibilityAction(name: "Look down", value: CGPoint(x: 0, y: 0.35)),
+            aimAccessibilityAction(name: "Turn left", value: CGPoint(x: -0.35, y: 0)),
+            aimAccessibilityAction(name: "Turn right", value: CGPoint(x: 0.35, y: 0))
+        ]
         lookSurface.layer.cornerRadius = 100
         lookSurface.layer.borderWidth = 2
         lookSurface.layer.borderColor = UIColor.white.withAlphaComponent(0.34).cgColor
@@ -375,6 +406,46 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
         let pointer = UIHoverGestureRecognizer(target: self, action: #selector(pointerChanged(_:)))
         pointer.cancelsTouchesInView = false
         addGestureRecognizer(pointer)
+    }
+
+    private func movementAccessibilityAction(name: String, value: CGPoint) -> UIAccessibilityCustomAction {
+        UIAccessibilityCustomAction(name: name) { [weak self] _ in
+            guard let self, !self.editingLayout else { return false }
+            self.accessibilityMovement = value
+            self.moveThumb.transform = self.stickThumbTransform(
+                value: value,
+                surface: self.movePad,
+                thumb: self.moveThumb,
+                invertY: true
+            )
+            self.movePad.accessibilityValue = value == .zero ? "Stopped" : name
+            self.onMove?(value, value != .zero)
+            return true
+        }
+    }
+
+    private func aimAccessibilityAction(name: String, value: CGPoint) -> UIAccessibilityCustomAction {
+        UIAccessibilityCustomAction(name: name) { [weak self] _ in
+            guard let self, !self.editingLayout else { return false }
+            self.lookThumb.transform = self.stickThumbTransform(
+                value: value,
+                surface: self.lookSurface,
+                thumb: self.lookThumb,
+                invertY: false
+            )
+            self.onLook?(value, false)
+            self.lookThumb.transform = .identity
+            self.lookSurface.accessibilityValue = "Centered"
+            return true
+        }
+    }
+
+    private func stickThumbTransform(value: CGPoint, surface: UIView, thumb: UIView, invertY: Bool) -> CGAffineTransform {
+        let travel = max(0, surface.bounds.width * 0.5 - thumb.bounds.width * 0.5 - 4)
+        return CGAffineTransform(
+            translationX: value.x * travel,
+            y: (invertY ? -value.y : value.y) * travel
+        )
     }
 
     private func configureButtons() {
@@ -736,6 +807,13 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
             if gesture.state == .ended || gesture.state == .cancelled { savePlacements() }
             return
         }
+        // Direct stick input takes ownership from any held accessibility
+        // direction. Without this reset, a later layout pass could redraw a
+        // stale assistive direction after the physical pan had released it.
+        accessibilityMovement = .zero
+        movePad.accessibilityValue = gesture.state == .ended || gesture.state == .cancelled
+            ? "Stopped"
+            : "Touch input"
         let point = gesture.location(in: movePad)
         let anchor = CGPoint(x: movePad.bounds.midX, y: movePad.bounds.midY)
         moveAnchor = anchor
@@ -891,9 +969,12 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
             }
         }
         moveAnchor = nil
+        accessibilityMovement = .zero
         pointerLastLocation = nil
         moveThumb.transform = .identity
         lookThumb.transform = .identity
+        movePad.accessibilityValue = "Stopped"
+        lookSurface.accessibilityValue = "Centered"
         moveRing.center = CGPoint(x: movePad.bounds.midX, y: movePad.bounds.midY)
         moveRing.isHidden = false
         onMove?(.zero, false)

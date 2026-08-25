@@ -344,3 +344,10 @@
 - **Decision:** Keep the reference proportions and right-thumb arc, but separate FIRE, ALT, JUMP, DUCK, and aim into pairwise non-intersecting iPad frames. Permit simultaneous recognition only for the movement/aim gameplay pair, keep editor pan/pinch gestures exclusive, enable multiple touch on the overlay, and use the reference's 0.92 pressed scale. Continue to keep reference names out of player UI.
 - **Evidence:** `Sources/UT99Host/GoldenPadTouchOverlay.swift`; `Sources/UT99Host/UT99TouchLayoutGeometry.swift`; `Tests/TouchLayoutGeometryTests.swift`; `Tests/test_host_state_and_data_menu.sh`; `docs/evidence/design-audit/2026-08-24-touch-material-fidelity/RESULT.md`.
 - **Reversal condition:** Physical iPhone/iPad testing reveals reach, occlusion, or recognizer conflicts; tune device-specific geometry or arbitration while retaining distinct UT hit targets and player-facing language.
+
+## 2026-08-24 — Give fixed touch sticks UT-specific accessibility actions
+
+- **Context:** Action buttons exposed UT labels and synchronous activation, but the two primary controls—Movement and Aim—were absent from the Simulator accessibility tree. A generic adjustable trait would not represent two axes or UT's digital W/A/S/D semantics.
+- **Decision:** Expose Movement and Aim as named elements with explicit directional custom actions. Movement directions remain held until an explicit Stop movement action, while Aim directions publish one bounded relative-look step and recenter. Direct movement pan takes ownership by clearing any held assistive direction. Preserve normal pan geometry and the movement/aim simultaneous-recognition policy.
+- **Evidence:** `Sources/UT99Host/GoldenPadTouchOverlay.swift`; `Tests/test_host_state_and_data_menu.sh`; `docs/evidence/accessibility/2026-08-24-touch-stick-ax/RESULT.md`.
+- **Reversal condition:** Physical VoiceOver testing shows that custom-action rotor navigation is too slow or conflicts with gameplay; preserve UT-specific labels, explicit release safety, and normal touch behavior while adapting to a more suitable accessible control model.

@@ -78,6 +78,19 @@ rg -Fq 'movePan.delegate = self' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'lookPan.delegate = self' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq '(first === movePad && second === lookSurface)' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'CGAffineTransform(scaleX: 0.92, y: 0.92)' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'movePad.accessibilityIdentifier = "ut99.touch.move"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'lookSurface.accessibilityIdentifier = "ut99.touch.aim"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'movementAccessibilityAction(name: "Stop movement", value: .zero)' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'aimAccessibilityAction(name: "Turn right"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'value: accessibilityMovement' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'self.lookSurface.accessibilityValue = "Centered"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'accessibilityMovement = .zero' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq '? "Stopped"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'UIApplication.shared.connectedScenes' Sources/UT99Host/GameViewController.swift
+if rg -Fq 'UIApplication.shared.windows' Sources/UT99Host/GameViewController.swift; then
+    echo "Deprecated process-wide window lookup returned" >&2
+    exit 1
+fi
 if rg -q 'moveThumb\.(widthAnchor|heightAnchor)|lookThumb\.(widthAnchor|heightAnchor)' Sources/UT99Host/GoldenPadTouchOverlay.swift; then
     echo "stick thumbs must use explicit bounds after reference-frame placement" >&2
     exit 1

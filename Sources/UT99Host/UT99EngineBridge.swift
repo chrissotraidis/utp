@@ -348,7 +348,7 @@ final class UT99EngineBridge {
                 )
                 if let data = line.data(using: .utf8),
                    let file = try? FileHandle(forWritingTo: outputURL) {
-                    try? file.seekToEnd()
+                    _ = try? file.seekToEnd()
                     try? file.write(contentsOf: data)
                     try? file.close()
                 }
@@ -723,7 +723,7 @@ final class UT99EngineBridge {
         let url = supportRoot.appendingPathComponent("UT99-touch-smoke.log")
         let data = Data((line + "\n").utf8)
         if FileManager.default.fileExists(atPath: url.path), let handle = try? FileHandle(forWritingTo: url) {
-            try? handle.seekToEnd()
+            _ = try? handle.seekToEnd()
             try? handle.write(contentsOf: data)
             try? handle.close()
         } else {
@@ -744,7 +744,7 @@ final class UT99EngineBridge {
         let url = serverBrowserSmokeLogURL()
         let data = Data((line + "\n").utf8)
         if let handle = try? FileHandle(forWritingTo: url) {
-            try? handle.seekToEnd()
+            _ = try? handle.seekToEnd()
             try? handle.write(contentsOf: data)
             try? handle.close()
         } else {

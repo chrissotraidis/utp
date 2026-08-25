@@ -2026,11 +2026,16 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         defer { isReassertingSDLWindow = false }
         guard let hostWindow = view.window,
               let scene = hostWindow.windowScene else { return }
-        // SDL may create its window before assigning it to the scene. Inspect
-        // both the active scene and the process-wide collection, then attach
-        // an unattached renderer window to the host scene below.
+        // Inspect every connected scene because SDL can finish creating its
+        // renderer window on a different scene callback than the host. Avoid
+        // UIApplication's deprecated process-wide `windows` collection; if
+        // SDL has not attached yet, the scheduled retries will find it once
+        // UIKit publishes it through its UIWindowScene.
         var windows = scene.windows
-        for candidate in UIApplication.shared.windows where !windows.contains(where: { $0 === candidate }) {
+        let sceneWindows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+        for candidate in sceneWindows where !windows.contains(where: { $0 === candidate }) {
             windows.append(candidate)
         }
         guard let engineWindow = windows.first(where: {
