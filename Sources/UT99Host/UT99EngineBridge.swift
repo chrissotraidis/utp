@@ -563,6 +563,17 @@ final class UT99EngineBridge {
     /// tab through SDL_PushEvent; it does not stand in for physical-device
     /// finger validation.
     func runServerBrowserPointerSmokeTest() {
+        runServerBrowserPointerSmokeTest(joinFirstServer: false)
+    }
+
+    /// Extends the bounded original-browser probe by double-clicking the
+    /// first populated server row. This is intentionally opt-in because the
+    /// selected public endpoint and its current map can change between runs.
+    func runServerBrowserJoinSmokeTest() {
+        runServerBrowserPointerSmokeTest(joinFirstServer: true)
+    }
+
+    private func runServerBrowserPointerSmokeTest(joinFirstServer: Bool) {
         resetServerBrowserSmokeLog()
         let keyEdge: (Int32, Bool) -> Void = { [weak self] key, pressed in
             self?.pushKey(key: key, pressed: pressed)
@@ -578,7 +589,7 @@ final class UT99EngineBridge {
             )
         }
 
-        appendServerBrowserSmokeLog("scheduled stock UBrowser navigation")
+        appendServerBrowserSmokeLog("scheduled stock UBrowser navigation joinFirstServer=\(joinFirstServer)")
         schedule(6_000) { [weak self] in
             self?.appendServerBrowserSmokeLog("open menu")
             keyPress(27) // Escape
@@ -616,7 +627,24 @@ final class UT99EngineBridge {
             self?.publishGameSurfacePointer(location: location, pressed: false)
         }
         schedule(15_000) { [weak self] in
-            self?.appendServerBrowserSmokeLog("complete")
+            guard !joinFirstServer else { return }
+            self?.appendServerBrowserSmokeLog("complete browser-only")
+        }
+        if joinFirstServer {
+            let serverRow = CGPoint(x: 600, y: 60)
+            schedule(30_000) { [weak self] in
+                self?.appendServerBrowserSmokeLog("move to first server row x=600 y=60")
+                self?.publishGameSurfacePointer(location: serverRow, pressed: nil)
+            }
+            for (offset, pressed) in [(30_200, true), (30_290, false), (30_410, true), (30_500, false)] {
+                schedule(offset) { [weak self] in
+                    self?.appendServerBrowserSmokeLog("first server row double-click pressed=\(pressed)")
+                    self?.publishGameSurfacePointer(location: serverRow, pressed: pressed)
+                }
+            }
+            schedule(31_000) { [weak self] in
+                self?.appendServerBrowserSmokeLog("complete join-attempt")
+            }
         }
     }
 

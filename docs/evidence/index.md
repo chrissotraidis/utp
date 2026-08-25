@@ -34,5 +34,6 @@
 - [iOS player-facing controls and packaged settings correction — 2026-08-24](engine-startup/2026-08-24-ios-player-facing-controls-fix/RESULT.md)
 - [Native direct-connect UI and live v469 server — 2026-08-24](network/2026-08-24-native-direct-connect-ui/RESULT.md)
 - [Original v469e server-browser bounded experiment — 2026-08-24](network/2026-08-24-original-server-browser/RESULT.md)
+- [Original v469e server-browser live join — 2026-08-24](network/2026-08-24-original-browser-join/RESULT.md)
 - [iOS interrupted-session recovery and safe mode — 2026-08-24](engine-startup/2026-08-24-ios-crash-recovery-pass/RESULT.md)
 - [iOS native 4:3 viewport pass — 2026-08-24](engine-startup/2026-08-24-ios-native-viewport-pass/RESULT.md)

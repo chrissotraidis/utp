@@ -112,8 +112,11 @@ rg -Fq 'SDL_GetMouseState' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_SendMouseMotion(window, 0, SDL_FALSE, x, y)' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq -- '-UT99ServerBrowserPointerSmokeTest' Sources/UT99Host/GameViewController.swift
 rg -Fq 'func runServerBrowserPointerSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq -- '-UT99ServerBrowserJoinSmokeTest' Sources/UT99Host/GameViewController.swift
+rg -Fq 'func runServerBrowserJoinSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'press UT Servers x=480 y=23' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'move to UT Servers x=480 y=23' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'move to first server row x=600 y=60' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'applyAppleNetworkProfile(to: URL(fileURLWithPath: iniPath))' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'bShownWindow=True' Sources/UT99Host/UT99EngineBridge.swift
 if rg -q 'return "EctoPad|message: "EctoPad|title: "EctoPad|text = "EctoPad' Sources/UT99Host/GameViewController.swift; then
