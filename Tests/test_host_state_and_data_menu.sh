@@ -103,11 +103,13 @@ rg -Fq 'let (window, windowID) = focusedSDLWindow()' Sources/UT99Host/UT99Engine
 rg -Fq 'SDL_WarpMouseInWindow' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'write32(windowID, at: 8, into: &event)' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_UT99SendMousePointer' Sources/UT99Host/UT99EngineBridge.swift
-rg -Fq 'SDL_UT99SendMousePointer' ref/SDL2/src/events/SDL_mouse.c
+rg -Fq 'SDL_UT99SendMousePointer' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'dirty_ref' tools/prepare_sdl2_source.sh
+rg -Fq 'patch -s -d "$staging/source" -p1' tools/prepare_sdl2_source.sh
 rg -Fq 'normalizedLines.append("MouseScale=1.000000")' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'let x = Int32(max(0, min(CGFloat(Int32.max), location.x)).rounded())' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_GetMouseState' Sources/UT99Host/UT99EngineBridge.swift
-rg -Fq 'SDL_SendMouseMotion(window, 0, SDL_FALSE, x, y)' ref/SDL2/src/events/SDL_mouse.c
+rg -Fq 'SDL_SendMouseMotion(window, 0, SDL_FALSE, x, y)' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq -- '-UT99ServerBrowserPointerSmokeTest' Sources/UT99Host/GameViewController.swift
 rg -Fq 'func runServerBrowserPointerSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'press UT Servers x=480 y=23' Sources/UT99Host/UT99EngineBridge.swift

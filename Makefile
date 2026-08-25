@@ -1,4 +1,4 @@
-.PHONY: doctor bootstrap mac-baseline ios-device verify-device device-check device-build device-install device-run package-local diagnostics clean-runtime audit-469e ios-shell data-pack sdl2-ios sdl2-shared-ios sdl2-shared-sim-ios ios-audio-deps ios-audio-sim ios-desktop-shim ios-desktop-shim-sim ios-fmod-stub ios-fmod-stub-sim ios-fmod-real ios-fmod-real-sim ios-engine-artifact ios-engine-real-artifact ios-engine-sim-real-artifact ios-engine-sim-artifact ios-engine-package ios-engine-real-package ios-engine-sim-real-package ios-engine-sim-package compare-sdl mac-hosted mac-hosted-entry mac-hosted-harness test
+.PHONY: doctor bootstrap mac-baseline ios-device verify-device device-check device-build device-install device-run package-local diagnostics clean-runtime audit-469e ios-shell data-pack prepare-sdl2-source sdl2-ios sdl2-shared-ios sdl2-shared-sim-ios ios-audio-deps ios-audio-sim ios-desktop-shim ios-desktop-shim-sim ios-fmod-stub ios-fmod-stub-sim ios-fmod-real ios-fmod-real-sim ios-engine-artifact ios-engine-real-artifact ios-engine-sim-real-artifact ios-engine-sim-artifact ios-engine-package ios-engine-real-package ios-engine-sim-real-package ios-engine-sim-package compare-sdl mac-hosted mac-hosted-entry mac-hosted-harness test
 doctor:
 	@./tools/doctor.sh
 bootstrap:
@@ -32,14 +32,17 @@ data-pack:
 	@test -n "$(SOURCE)" || (echo 'Usage: make data-pack SOURCE=/path/to/UT99' >&2; exit 2)
 	@python3 tools/prepare_ut99_data.py --source "$(SOURCE)" --output build/UT99Data --zip
 
-sdl2-ios:
-	@xcodebuild -project ref/SDL2/Xcode/SDL/SDL.xcodeproj -scheme xcFramework-iOS -configuration Release -derivedDataPath build/sdl2-xcframework CODE_SIGNING_ALLOWED=NO build
+prepare-sdl2-source:
+	@./tools/prepare_sdl2_source.sh
 
-sdl2-shared-ios:
-	@xcodebuild -project ref/SDL2/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphoneos -configuration Release -derivedDataPath build/sdl2-shared-ios CODE_SIGNING_ALLOWED=NO build
+sdl2-ios: prepare-sdl2-source
+	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme xcFramework-iOS -configuration Release -derivedDataPath build/sdl2-xcframework CODE_SIGNING_ALLOWED=NO build
 
-sdl2-shared-sim-ios:
-	@xcodebuild -project ref/SDL2/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphonesimulator -configuration Release -derivedDataPath build/sdl2-shared-sim-ios CODE_SIGNING_ALLOWED=NO build
+sdl2-shared-ios: prepare-sdl2-source
+	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphoneos -configuration Release -derivedDataPath build/sdl2-shared-ios CODE_SIGNING_ALLOWED=NO build
+
+sdl2-shared-sim-ios: prepare-sdl2-source
+	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphonesimulator -configuration Release -derivedDataPath build/sdl2-shared-sim-ios CODE_SIGNING_ALLOWED=NO build
 
 ios-audio-deps:
 	@./tools/build_ios_dependencies.sh

@@ -15,8 +15,10 @@ done
 bash -n tools/bootstrap_dependencies.sh
 bash -n tools/prepare_mac_baseline.sh
 bash -n tools/collect_diagnostics.sh
+bash -n tools/prepare_sdl2_source.sh
 grep -Fq 'OldUnreal-UTPatch469e-macOS.dmg' tools/bootstrap_dependencies.sh
 grep -Fq 'b6b3a1f462e4b702df0eecf90d663ef1f847cc36aadca1ec6dd35278d091fa0d' tools/bootstrap_dependencies.sh
+grep -Fq 'build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj' Makefile
 grep -Fq '/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox' Makefile
 if grep -Fq '/System/Library/Frameworks/AudioUnit.framework/AudioUnit' Makefile; then
   echo "FMOD still targets the unavailable iOS AudioUnit runtime path" >&2
