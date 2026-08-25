@@ -23,6 +23,7 @@ rg -Fq 'UTP-${release_version}-unsigned.ipa' tools/package_local_ipa.sh
 rg -q 're_signable:\$re_signable' tools/package_local_ipa.sh
 rg -q 'reason=signing_metadata_archived' tools/package_local_ipa.sh
 rg -q 'codesign --remove-signature' tools/package_local_ipa.sh
+rg -q 'strip -x' tools/package_local_ipa.sh
 rg -q 'reason=embedded_code_signature_archived' tools/package_local_ipa.sh
 rg -q 'reason=development_team_identifier_archived' tools/package_local_ipa.sh
 rg -q 'reason=local_build_path_archived' tools/package_local_ipa.sh

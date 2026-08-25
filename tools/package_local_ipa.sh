@@ -104,6 +104,7 @@ if [[ "$mode" == "public" ]]; then
   while IFS= read -r -d '' candidate; do
     if file "$candidate" | grep -q 'Mach-O'; then
       codesign --remove-signature "$candidate"
+      strip -x "$candidate"
     fi
   done < <(find "$stage/Payload/UT99Apple.app" -type f -print0)
 fi
