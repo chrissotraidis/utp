@@ -111,10 +111,11 @@ enum UT99TouchLayoutGeometry {
     }
 }
 
-/// Direct tablet translation of EctoPad's `SunPadGameOverlay.mm` at commit
-/// 461de17f549d98742bc3b2d031156f79ab3eaa9d. The normalized centers and sizes
-/// intentionally preserve its GameCube-like thumb cluster; only the labels and
-/// engine actions change for Unreal Tournament.
+/// Tablet adaptation of EctoPad's `SunPadGameOverlay.mm` at commit
+/// 461de17f549d98742bc3b2d031156f79ab3eaa9d. The control sizes and thumb arc
+/// retain the reference hierarchy, but UT's independent gameplay actions use
+/// non-overlapping hit targets instead of the reference's physical-button
+/// overlap.
 enum UT99EctoPadReferenceLayout {
     static func tabletFrames(
         safeRect: CGRect,
@@ -142,11 +143,11 @@ enum UT99EctoPadReferenceLayout {
                               y: safeRect.origin.y + 0.7947259566 * safeRect.size.height)
         var result = Dictionary(uniqueKeysWithValues: [
             frame("move", 0.1310395315, 0.7905894519, 172, 172),
-            frame("look", 0.9062957540, 0.8583247156, 112, 112),
-            frame("primaryFire", 0.8916544656, 0.7409513961, 104, 104),
-            frame("alternateFire", 0.8360175695, 0.8092037229, 76, 76),
-            frame("jump", 0.9593704246, 0.7156153051, 62, 62),
-            frame("crouch", 0.9542459736, 0.7869700103, 62, 62),
+            frame("look", 0.9152542373, 0.9038461538, 112, 112),
+            frame("primaryFire", 0.8898305085, 0.7307692308, 104, 104),
+            frame("alternateFire", 0.8093220339, 0.8076923077, 76, 76),
+            frame("jump", 0.9661016949, 0.6858974359, 62, 62),
+            frame("crouch", 0.9661016949, 0.7820512821, 62, 62),
             frame("pause", 0.8967789165, 0.5780765253, 116, 62),
             // UT has four low-frequency utility actions that map cleanly to
             // EctoPad's four-direction pad. Weapon cycling belongs on left /

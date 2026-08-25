@@ -72,12 +72,18 @@ rg -Fq 'moveRing.isHidden = false' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'case .standard, .ectoPad, .goldenPad: 0.82' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'let thumbDiameter = resolvedDiameter * 0.42' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'let compact = visualRole == .dPad' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'isMultipleTouchEnabled = true' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'movePan.delegate = self' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'lookPan.delegate = self' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq '(first === movePad && second === lookSurface)' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'CGAffineTransform(scaleX: 0.92, y: 0.92)' Sources/UT99Host/GoldenPadTouchOverlay.swift
 if rg -q 'moveThumb\.(widthAnchor|heightAnchor)|lookThumb\.(widthAnchor|heightAnchor)' Sources/UT99Host/GoldenPadTouchOverlay.swift; then
     echo "stick thumbs must use explicit bounds after reference-frame placement" >&2
     exit 1
 fi
 rg -Fq 'lookThumb.backgroundColor = UIColor(red: 1.00, green: 0.84, blue: 0.25, alpha: 0.98)' Sources/UT99Host/GoldenPadTouchOverlay.swift
-rg -Fq '0.8916544656' Sources/UT99Host/UT99TouchLayoutGeometry.swift
+rg -Fq '0.8898305085' Sources/UT99Host/UT99TouchLayoutGeometry.swift
 rg -Fq 'private final class UT99HostMenuButton: UIButton' Sources/UT99Host/GameViewController.swift
 rg -Fq 'menuButton.onAccessibilityActivate' Sources/UT99Host/GameViewController.swift
 rg -Fq 'menuButton.showsMenuAsPrimaryAction = true' Sources/UT99Host/GameViewController.swift
@@ -87,7 +93,7 @@ rg -Fq 'touchSettingsRow(title: "Size", control: size)' Sources/UT99Host/GameVie
 rg -Fq 'guard !CommandLine.arguments.contains("-UT99AutoStart") else { return }' Sources/UT99Host/GameViewController.swift
 rg -Fq 'CommandLine.arguments.contains("-UT99TouchSettingsPanelSmokeTest"),' Sources/UT99Host/GameViewController.swift
 rg -Fq 'touchOverlay.isHidden = true' Sources/UT99Host/GameViewController.swift
-if rg -q 'Layout Preset|touchPresetChanged|UISegmentedControl\(items:' Sources/UT99Host/GameViewController.swift; then
+if rg -q 'Layout Preset|touchPresetChanged|showTouchProfiles|Choose a control size preset|UISegmentedControl\(items:' Sources/UT99Host/GameViewController.swift; then
     echo "Internal touch-layout terminology leaked into the player settings UI" >&2
     exit 1
 fi

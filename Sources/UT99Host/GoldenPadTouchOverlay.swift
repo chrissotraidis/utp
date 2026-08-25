@@ -106,7 +106,7 @@ private final class UT99TouchActionButton: UIButton {
 /// The overlay owns touch tracking and publishes semantic actions. The engine
 /// input adapter can consume these values without knowing where a control was
 /// drawn. This keeps the host UI and the original engine boundary separate.
-final class GoldenPadTouchOverlay: UIView {
+final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
     enum TouchProfile: String {
         case standard
         /// Legacy import aliases. New preferences and exports use `standard`.
@@ -202,6 +202,7 @@ final class GoldenPadTouchOverlay: UIView {
         touchConfiguration = UT99TouchConfiguration.load()
         super.init(frame: frame)
         isUserInteractionEnabled = true
+        isMultipleTouchEnabled = true
         backgroundColor = .clear
         loadPlacements()
         alpha = touchOpacity
@@ -328,7 +329,9 @@ final class GoldenPadTouchOverlay: UIView {
         moveThumb.addSubview(moveGlyph)
         moveRing.isHidden = false
         movePad.addSubview(moveRing)
-        movePad.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(moveChanged(_:))))
+        let movePan = UIPanGestureRecognizer(target: self, action: #selector(moveChanged(_:)))
+        movePan.delegate = self
+        movePad.addGestureRecognizer(movePan)
         let movePinch = UIPinchGestureRecognizer(target: self, action: #selector(layoutZonePinchChanged(_:)))
         movePinch.cancelsTouchesInView = false
         movePad.addGestureRecognizer(movePinch)
@@ -345,7 +348,9 @@ final class GoldenPadTouchOverlay: UIView {
         lookGlyph.tintColor = UIColor(white: 0.12, alpha: 0.92)
         lookGlyph.alpha = 1
         lookThumb.addSubview(lookGlyph)
-        lookSurface.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(lookChanged(_:))))
+        let lookPan = UIPanGestureRecognizer(target: self, action: #selector(lookChanged(_:)))
+        lookPan.delegate = self
+        lookSurface.addGestureRecognizer(lookPan)
         let lookPinch = UIPinchGestureRecognizer(target: self, action: #selector(layoutZonePinchChanged(_:)))
         lookPinch.cancelsTouchesInView = false
         lookSurface.addGestureRecognizer(lookPinch)
@@ -794,6 +799,21 @@ final class GoldenPadTouchOverlay: UIView {
         return CGPoint(x: x, y: invertY ? -y : y)
     }
 
+    /// UIKit gesture recognizers are mutually exclusive unless their delegate
+    /// opts in. Movement and aim live on separate fixed sticks specifically so
+    /// two thumbs can hold both at once; allow only that gameplay pair to run
+    /// simultaneously. Editor pan/pinch gestures retain exclusive arbitration.
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        guard !editingLayout else { return false }
+        let first = gestureRecognizer.view
+        let second = otherGestureRecognizer.view
+        return (first === movePad && second === lookSurface) ||
+            (first === lookSurface && second === movePad)
+    }
+
     @objc private func pointerChanged(_ gesture: UIHoverGestureRecognizer) {
         let point = gesture.location(in: self)
         switch gesture.state {
@@ -831,7 +851,9 @@ final class GoldenPadTouchOverlay: UIView {
             delay: 0,
             options: [.beginFromCurrentState, .allowUserInteraction]
         ) {
-            sender.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+            // Match the reference control's unmistakable down state while the
+            // haptic confirms the press under the player's thumb.
+            sender.transform = CGAffineTransform(scaleX: 0.92, y: 0.92)
         }
         onAction?(action, true)
     }

@@ -1319,28 +1319,6 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         present(alert, animated: true)
     }
 
-    @objc private func showTouchProfiles() {
-        let alert = UIAlertController(
-            title: "Touch layout",
-            message: "Choose a control size preset. Placement, size, opacity, and handedness are saved on this device.",
-            preferredStyle: .actionSheet
-        )
-        for profile in [GoldenPadTouchOverlay.TouchProfile.standard,
-                        .compact,
-                        .highVisibility] {
-            alert.addAction(UIAlertAction(title: profile.title, style: .default) { [weak self] _ in
-                self?.touchOverlay.applyTouchProfile(profile)
-                self?.statusLabel.text = "Touch layout: \(profile.title)"
-            })
-        }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = menuButton
-            popover.sourceRect = menuButton.bounds
-        }
-        present(alert, animated: true)
-    }
-
     @objc private func showNamedTouchProfiles() {
         let profiles = UT99TouchProfileStore.profiles()
         let noun = profiles.count == 1 ? "layout" : "layouts"

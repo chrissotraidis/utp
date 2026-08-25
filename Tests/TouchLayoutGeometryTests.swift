@@ -71,11 +71,16 @@ require(tablet["jump"]!.width == 62 && tablet["crouch"]!.width == 62,
 require(tablet["pause"]!.width == 116 && tablet["pause"]!.height == 62,
         "iPad MENU pill drifted")
 
-// EctoPad's A/B/X/Y face cluster intentionally overlaps like a physical
-// GameCube face. Guard the exact hierarchy instead of flattening it through the
-// generic imported-profile collision solver.
-require(tablet["primaryFire"]!.intersects(tablet["alternateFire"]!),
-        "iPad face cluster drifted away from EctoPad")
+// The reference's physical A/B/X/Y cluster overlaps visually. UT maps these to
+// independent touch actions, so every visible right-side control must own an
+// unambiguous hit region.
+let rightControls = ["look", "primaryFire", "alternateFire", "jump", "crouch"]
+for (offset, firstKey) in rightControls.enumerated() {
+    for secondKey in rightControls.dropFirst(offset + 1) {
+        require(!tablet[firstKey]!.intersects(tablet[secondKey]!),
+                "iPad right controls overlap: \(firstKey) / \(secondKey)")
+    }
+}
 require(tablet["primaryFire"]!.midY < tablet["look"]!.midY,
         "iPad FIRE must remain above the aim stick")
 require(tablet["alternateFire"]!.midX < tablet["primaryFire"]!.midX,
