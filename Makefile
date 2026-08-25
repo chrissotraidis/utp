@@ -1,6 +1,8 @@
-.PHONY: doctor bootstrap mac-baseline ios-device verify-device device-check device-build device-install device-run package-local diagnostics clean-runtime audit-469e ios-shell data-pack prepare-sdl2-source sdl2-ios sdl2-shared-ios sdl2-shared-sim-ios ios-audio-deps ios-audio-sim ios-desktop-shim ios-desktop-shim-sim ios-fmod-stub ios-fmod-stub-sim ios-fmod-real ios-fmod-real-sim ios-engine-artifact ios-engine-real-artifact ios-engine-sim-real-artifact ios-engine-sim-artifact ios-engine-package ios-engine-real-package ios-engine-sim-real-package ios-engine-sim-package compare-sdl mac-hosted mac-hosted-entry mac-hosted-harness test
+.PHONY: doctor public-check bootstrap mac-baseline ios-device verify-device device-check device-build device-install device-run package-local diagnostics clean-runtime audit-469e ios-shell data-pack prepare-sdl2-source sdl2-ios sdl2-shared-ios sdl2-shared-sim-ios ios-audio-deps ios-audio-sim ios-desktop-shim ios-desktop-shim-sim ios-fmod-stub ios-fmod-stub-sim ios-fmod-real ios-fmod-real-sim ios-engine-artifact ios-engine-real-artifact ios-engine-sim-real-artifact ios-engine-sim-artifact ios-engine-package ios-engine-real-package ios-engine-sim-real-package ios-engine-sim-package compare-sdl mac-hosted mac-hosted-entry mac-hosted-harness test
 doctor:
 	@./tools/doctor.sh
+public-check:
+	@./tools/check_public_repo.sh
 bootstrap:
 	@./tools/bootstrap_dependencies.sh
 mac-baseline:

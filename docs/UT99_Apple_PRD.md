@@ -4,10 +4,11 @@
 **Companion execution document:** `docs/UT99_Agent_Goal_Loop.md`  
 **Status:** Implementation PRD with mandatory feasibility gates  
 **Research cutoff:** 2026-08-23  
-**Internal working name:** `UT99Apple`  
+**Project name:** `UTP`<br>
+**Legacy internal build identifier:** `UT99Apple` (Xcode target and current artifact name)<br>
 **Primary product:** Native Unreal Tournament (1999) client for iOS and iPadOS  
 **Reference desktop build:** OldUnreal Unreal Tournament v469e for macOS  
-**UI reference:** EctoPad under `ref/ectopad` (source mirror `/Users/chrissotraidis/GitHub/ectopad`)
+**UI reference:** EctoPad in an ignored local checkout under `ref/ectopad`
 
 ---
 
@@ -1404,7 +1405,7 @@ The stop report must identify the last passed gate, exact errors, binaries and h
 14. Does community master-server traffic require any TLS/HTTP behavior that the iOS process lacks?
 15. Which public servers reject the client because of legacy anti-cheat rather than protocol incompatibility?
 16. Can the preferred final IPA be distributed as a prebuilt artifact under applicable permissions, or must users locally build it? Current answer: unresolved; Simulator/package success is not distribution permission.
-17. May UT99Apple directly acquire the GOTY image/data from OldUnreal's authorized installer endpoints, or must it hand off to the existing installer/manual import flow?
+17. May UTP directly acquire the GOTY image/data from OldUnreal's authorized installer endpoints, or must it hand off to the existing installer/manual import flow?
 18. Is TestFlight/App Store viable for the transformed engine, or is Apple-approved regional website distribution/local signing required?
 
 Each answer belongs in `docs/DECISIONS.md` or the relevant specialized document with evidence.

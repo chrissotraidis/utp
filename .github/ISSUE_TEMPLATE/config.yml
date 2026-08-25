@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project status and current gates
+    url: https://github.com/chrissotraidis/utp/blob/main/docs/STATUS.md
+    about: Check what is proven and what still requires physical hardware before opening an issue.
+  - name: Sensitive security report
+    url: https://github.com/chrissotraidis/utp/security/advisories/new
+    about: Privately report a vulnerability that could expose credentials, private files, or unsafe code execution.

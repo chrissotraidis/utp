@@ -1,4 +1,4 @@
-# UT99Apple status
+# UTP status
 
 - **State:** INVESTIGATING
 - **Current PRD gate:** G2 physical-device host shell remains unproven; iPadOS/iOS Simulator stock DeathMatch, full-bleed EctoPad-derived composition, and actual FruCoRe presentation instrumentation are passing partial evidence

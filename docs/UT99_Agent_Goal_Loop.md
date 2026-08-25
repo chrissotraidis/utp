@@ -3,7 +3,7 @@
 **Canonical repository location:** `docs/UT99_Agent_Goal_Loop.md`
 **Authoritative requirements:** `docs/UT99_Apple_PRD.md`
 **Project:** Native Unreal Tournament (1999) for iOS and iPadOS
-**Reference UI repository:** EctoPad (`ref/ectopad`, source mirror `/Users/chrissotraidis/GitHub/ectopad`)
+**Reference UI repository:** EctoPad (ignored local checkout under `ref/ectopad`)
 **Execution host:** the current Apple Silicon macOS computer
 
 ---
