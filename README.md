@@ -1,9 +1,9 @@
 # UTP
 
 <p align="center">
-  <strong>Unreal Tournament 99, experimentally rehosted for iPhone and iPad.</strong><br>
-  OldUnreal v469e, FruCoRe Metal rendering, touch controls, local data import,
-  and the original online protocol inside a native UIKit host.
+  <strong>Unreal Tournament 99 on iPhone and iPad.</strong><br>
+  UTP hosts the original OldUnreal v469e game inside a native iOS app with
+  Metal rendering, touch controls, game-file setup, and classic online play.
 </p>
 
 <p align="center">
@@ -15,6 +15,10 @@
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
+![Unreal Tournament 99 gameplay in UTP with the Flak Cannon visible](docs/readme/utp-gameplay-flak-cannon.png)
+
+<p align="center"><em>Current UTP gameplay build. Physical-device acceptance remains pending.</em></p>
+
 <p align="center">
   <a href="#release-status">Status</a> ·
   <a href="#build-and-test">Build</a> ·
@@ -24,13 +28,14 @@
   <a href="https://github.com/chrissotraidis/utp/issues/new/choose">Report a problem</a>
 </p>
 
-UTP is an experimental native iOS/iPadOS host for the official
-[OldUnreal Unreal Tournament v469e](https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e)
-ARM64 runtime. A deterministic build-time pipeline prepares the runtime for an
-iOS app bundle, replaces or narrowly adapts audited desktop dependencies, and
-hosts the original engine inside UIKit. FruCoRe remains responsible for the
-Metal-rendered game, while the host owns lifecycle, touch input, data import,
-diagnostics, and Apple-platform integration.
+UTP brings the original Unreal Tournament 99 engine to iPhone and iPad by
+hosting the official
+[OldUnreal v469e](https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e)
+ARM64 runtime inside a native iOS app. It is not streaming, emulation, or a
+remake: the original game still owns its menus, maps, bots, weapons, rules, and
+multiplayer protocol. UTP supplies the Apple-platform layer around it—Metal
+presentation, touch input, lifecycle, game-file setup, recovery, and
+diagnostics.
 
 This repository does **not** contain Epic game data, OldUnreal release
 binaries, a generated engine image, signing material, or a downloadable IPA.
@@ -83,22 +88,43 @@ Current repository evidence includes:
 These are not claims of physical-device acceptance. See
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for the remaining limits.
 
-## Game data and first launch
+## Getting the game files
 
-The app and Unreal Tournament content are deliberately separate. Local
-development builds present two first-run choices:
+UTP and Unreal Tournament are deliberately separate. The repository and app
+package contain no Epic game data, disc image, or prepared game installation.
 
-1. **Get Game Data** shows the source, size, terms, and destination before any
-   download; verifies the exact approved installer image by size and SHA-256;
-   extracts only supported data packages; and removes temporary media.
-2. **Import Files** accepts a user-owned folder or ZIP, rejects unsafe paths,
-   encrypted entries, and desktop/native executables, then installs the data
-   transactionally.
+### Where do the files come from?
 
-Only `Maps`, `Music`, `Sounds`, and `Textures` data is accepted. The repository
-and app package remain data-free. The implemented acquisition flow is ready
-for physical testing, but enabling it in a publicly distributed binary still
-requires written permission and Apple-channel review. See
+- **Official OldUnreal route:** the
+  [OldUnreal full-game installer page](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/)
+  is the recommended source of truth. OldUnreal currently says its installers
+  download the original Unreal Tournament 99 GOTY disc image from its own file
+  servers, use Archive.org only as a fallback, and apply the latest OldUnreal
+  patch.
+- **An existing copy:** if you already have a user-authorized GOTY installation,
+  UTP can import its supported data from a folder or ZIP.
+
+You do not buy game files from UTP, and UTP does not redistribute or relicense
+them. The current OldUnreal download route is provided under OldUnreal's and
+the rights holders' terms; follow their page for current availability.
+
+### How does setup work inside UTP?
+
+The current development build presents two choices on first launch:
+
+1. **Get Game Data** explains the source, approximate size, terms, and
+   destination before consent. It verifies the exact installer image by size
+   and SHA-256, extracts only supported data, installs it transactionally, and
+   removes the temporary image.
+2. **Import Files** accepts a folder or ZIP you already have. It rejects unsafe
+   paths, encrypted entries, and desktop/native executables before replacing a
+   working installation.
+
+UTP keeps only the supported `Maps`, `Music`, `Sounds`, and `Textures` data in
+its app container. It does not import the desktop `System` directory or run
+native code from imported content. The acquisition flow is ready for physical
+testing, but enabling it in a publicly distributed binary still requires
+written permission and Apple-channel review. See
 [`docs/DATA_COMPATIBILITY.md`](docs/DATA_COMPATIBILITY.md) and
 [`docs/DISTRIBUTION_AND_ONBOARDING.md`](docs/DISTRIBUTION_AND_ONBOARDING.md).
 
@@ -196,10 +222,21 @@ The exact technical and stop-gate rationale is in
 
 ## Online play
 
-The current Simulator build has populated the original v469 server browser,
-joined unmodified public servers, downloaded data-only packages, reached
+Yes—the current Simulator build uses the original v469 server browser and has
+connected to real community Unreal Tournament servers. It has populated live
+listings, joined unmodified servers, downloaded data-only packages, reached
 player possession, exercised combat and respawn, survived a natural map
 transition, and disconnected through the original menu.
+
+<details>
+<summary><strong>See the original server browser running in UTP</strong></summary>
+
+![The original Unreal Tournament server browser populated with community servers in UTP](docs/readme/utp-server-browser.png)
+
+This current development screenshot shows the original OldUnreal v469e
+browser populated with live community listings. Server names, availability,
+player counts, and ping values change over time.
+</details>
 
 Public launch copy must wait for the physical-device networking gate: device
 Wi-Fi/DNS/UDP, original-browser play, package download, chat observed by a
@@ -233,20 +270,22 @@ local diagnostic IPA is not a public consumer release.
 </details>
 
 <details>
-<summary><strong>Does the repository include Unreal Tournament?</strong></summary>
+<summary><strong>Is Unreal Tournament 99 free, and where do I get the files?</strong></summary>
 
-No. It contains no Epic game data, OldUnreal release binary, generated engine
-image, or prepared runtime package. Do not open issues requesting proprietary
-files or download links.
+UTP does not sell or bundle Unreal Tournament. OldUnreal currently provides
+[full-game installers](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/)
+that download the original GOTY disc image from its servers and apply the
+latest patch. Use OldUnreal's page for the current download and terms. UTP does
+not treat that availability as a license to redistribute the game itself.
 </details>
 
 <details>
-<summary><strong>How does first-run setup work?</strong></summary>
+<summary><strong>What happens to the game files after setup?</strong></summary>
 
-Local builds offer **Get Game Data** and **Import Files**. Both paths validate
-content and install only supported data packages. The direct acquisition path
-shows its source, size, terms, and destination before consent. Its public-binary
-use still requires permission and Apple review.
+UTP stores the accepted `Maps`, `Music`, `Sounds`, and `Textures` inside its
+private app container. It rejects desktop executables and native packages,
+commits imports transactionally, and removes temporary acquisition media. The
+repository and distributable app remain game-data-free.
 </details>
 
 <details>
@@ -276,12 +315,12 @@ keyboard traversal, and mixed-input behavior still require hardware evidence.
 </details>
 
 <details>
-<summary><strong>Does online multiplayer work?</strong></summary>
+<summary><strong>Does UTP connect to real Unreal Tournament servers?</strong></summary>
 
-Meaningful original-protocol play works in Simulator, including the server
-browser, join, package download, combat, respawn, map transition, and
-disconnect. Physical networking and observer-confirmed chat remain release
-gates.
+Yes in the current Simulator evidence. UTP uses the original v469e server
+browser and protocol, and it has joined real community servers through the
+original menu. Physical iPhone/iPad networking and observer-confirmed chat
+remain release gates.
 </details>
 
 <details>
