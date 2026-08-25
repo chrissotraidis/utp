@@ -65,11 +65,11 @@ rg -Fq 'layoutDoneButton.leadingAnchor.constraint(equalTo: layoutBanner.trailing
 rg -Fq 'private final class UT99TouchActionButton: UIButton' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'case primary, secondary, utility, dPad, start' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'symbol: symbol(for: action)' Sources/UT99Host/GoldenPadTouchOverlay.swift
-rg -Fq 'case ectoPad' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'case standard' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'case .primaryFire: "scope"' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'override func accessibilityActivate() -> Bool' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'moveRing.isHidden = false' Sources/UT99Host/GoldenPadTouchOverlay.swift
-rg -Fq 'case .ectoPad, .goldenPad: 0.82' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'case .standard, .ectoPad, .goldenPad: 0.82' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'let thumbDiameter = resolvedDiameter * 0.42' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'let compact = visualRole == .dPad' Sources/UT99Host/GoldenPadTouchOverlay.swift
 if rg -q 'moveThumb\.(widthAnchor|heightAnchor)|lookThumb\.(widthAnchor|heightAnchor)' Sources/UT99Host/GoldenPadTouchOverlay.swift; then
@@ -121,6 +121,10 @@ rg -Fq 'applyAppleNetworkProfile(to: URL(fileURLWithPath: iniPath))' Sources/UT9
 rg -Fq 'bShownWindow=True' Sources/UT99Host/UT99EngineBridge.swift
 if rg -q 'return "EctoPad|message: "EctoPad|title: "EctoPad|text = "EctoPad' Sources/UT99Host/GameViewController.swift; then
     echo "Reference implementation name leaked into player-facing UI" >&2
+    exit 1
+fi
+if rg -q 'NSLog\("EctoPad|profile=ectoPad|ectoPad=true' Sources/UT99Host/GameViewController.swift; then
+    echo "Reference implementation name leaked into runtime diagnostics" >&2
     exit 1
 fi
 if rg -q 'UIBlurEffect|innerRing|captionLabel|glyphView' Sources/UT99Host/GoldenPadTouchOverlay.swift; then

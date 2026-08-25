@@ -32,6 +32,7 @@
 - [iOS EctoPad/UT menu redesign and final control mapping — 2026-08-24](engine-startup/2026-08-24-ios-ectopad-menu-redesign/RESULT.md)
 - [iOS touch-settings copy and layering correction — 2026-08-24](engine-startup/2026-08-24-ios-control-settings-copy-fix/RESULT.md)
 - [iOS player-facing controls and packaged settings correction — 2026-08-24](engine-startup/2026-08-24-ios-player-facing-controls-fix/RESULT.md)
+- [iOS player-facing profile language and current iPad runtime — 2026-08-24](engine-startup/2026-08-24-player-profile-language/RESULT.md)
 - [Native direct-connect UI and live v469 server — 2026-08-24](network/2026-08-24-native-direct-connect-ui/RESULT.md)
 - [Original v469e server-browser bounded experiment — 2026-08-24](network/2026-08-24-original-server-browser/RESULT.md)
 - [Original v469e server-browser live join — 2026-08-24](network/2026-08-24-original-browser-join/RESULT.md)

@@ -9,7 +9,7 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
 func profile(named name: String = "Arena") -> UT99TouchProfileDocument {
     UT99TouchProfileDocument(
         name: name,
-        preset: "ectoPad",
+        preset: "standard",
         opacity: 0.72,
         globalScale: 0.94,
         configuration: .standard,
@@ -32,6 +32,15 @@ struct TouchProfileStoreTests {
         try expect(encoded == encodedAgain, "encoding must be deterministic")
         try expect(decoded == profile(), "round trip")
         try expect(String(data: encoded, encoding: .utf8)?.contains("\"schemaVersion\" : 1") == true, "versioned JSON")
+        try expect(String(data: encoded, encoding: .utf8)?.contains("\"preset\" : \"standard\"") == true, "player-facing preset id")
+
+        var legacy = profile(named: "Imported")
+        legacy.preset = "ectoPad"
+        let migrated = try UT99TouchProfileStore.validated(legacy)
+        let migratedJSON = try UT99TouchProfileStore.encode(legacy)
+        try expect(migrated.preset == "standard", "legacy preset migration")
+        try expect(String(data: migratedJSON, encoding: .utf8)?.contains("ectoPad") == false,
+                   "legacy name must not survive export")
 
         var unsafe = profile(named: "  Clamped  ")
         unsafe.opacity = 9

@@ -87,7 +87,7 @@ enum UT99TouchProfileStore {
     static let maxImportBytes = 64 * 1024
     static let fileExtension = "ut99touch"
 
-    static let supportedPresets: Set<String> = ["ectoPad", "goldenPad", "compact", "highVisibility"]
+    static let supportedPresets: Set<String> = ["standard", "ectoPad", "goldenPad", "compact", "highVisibility"]
     static let supportedControls: Set<String> = UT99TouchConfiguration.supportedActionIDs
         .union(["move", "look"])
 
@@ -116,9 +116,12 @@ enum UT99TouchProfileStore {
             placements[control] = try placement.sanitized()
         }
 
+        let canonicalPreset = ["ectoPad", "goldenPad"].contains(source.preset)
+            ? "standard"
+            : source.preset
         return UT99TouchProfileDocument(
             name: name,
-            preset: source.preset,
+            preset: canonicalPreset,
             opacity: min(max(source.opacity, 0.25), 1.0),
             globalScale: min(max(source.globalScale, 0.75), 1.35),
             configuration: source.configuration.sanitized(),

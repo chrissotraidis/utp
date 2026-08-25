@@ -104,8 +104,8 @@ jq -n \
   echo "host_metal=PASS"
   echo "import_transaction=PASS"
   echo "diagnostics_archive=PASS"
-  echo "manual_required=physical screenshot, EctoPad/menu taps, Files picker import, share-sheet export"
+  echo "manual_required=physical screenshot, touch-control/menu taps, Files picker import, share-sheet export"
 } >"$evidence_dir/RESULT.txt"
 
 echo "device_gate=automated_partial evidence=$evidence_dir"
-echo "Leave the host open. Capture a physical screenshot and manually verify EctoPad controls, the three-dot menu, Files import, and share-sheet export before promoting G2."
+echo "Leave the host open. Capture a physical screenshot and manually verify touch controls, the three-dot menu, Files import, and share-sheet export before promoting G2."

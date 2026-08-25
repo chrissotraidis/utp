@@ -123,4 +123,4 @@ let fitted = UT99TouchLayoutGeometry.fittedScale(
 let customFrames = UT99TouchLayoutGeometry.frames(scale: fitted, controls: customControls)
 require(UT99TouchLayoutGeometry.collisionPairs(in: customFrames).isEmpty, "custom placement solver regressed")
 
-print("UT99 EctoPad touch geometry PASS controls=11 tablet=true phone=true southpaw=true")
+print("UT99 reference touch geometry PASS controls=11 tablet=true phone=true southpaw=true")

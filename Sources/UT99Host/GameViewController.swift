@@ -298,7 +298,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
             touchOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         touchOverlay.onAction = { [weak self] action, pressed in
-            NSLog("EctoPad touch action=%@ pressed=%@", action.rawValue, pressed ? "true" : "false")
+            NSLog("UT99 touch action=%@ pressed=%@", action.rawValue, pressed ? "true" : "false")
             self?.engineBridge.publishTouchAction(action, pressed: pressed)
         }
         touchOverlay.onMove = { [weak self] value, active in
@@ -396,10 +396,10 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         }
         if g2SmokeRequested || CommandLine.arguments.contains("-UT99TouchDefaultSmokeTest") {
             touchOverlay.resetTouchLayout()
-            touchOverlay.applyTouchProfile(.ectoPad)
+            touchOverlay.applyTouchProfile(.standard)
             touchOverlay.setGlobalScale(1.0)
             statusLabel.text = "Touch visual smoke · Standard · 100%"
-            NSLog("UT99 touch visual smoke profile=ectoPad userScale=1.0")
+            NSLog("UT99 touch visual smoke profile=standard userScale=1.0")
         } else if CommandLine.arguments.contains("-UT99TouchGeometrySmokeTest") {
             touchOverlay.applyTouchProfile(.highVisibility)
             touchOverlay.setGlobalScale(1.35)
@@ -432,7 +432,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         }
         if g2SmokeRequested {
             pendingG2DiagnosticsExport = true
-            NSLog("UT99 G2 host smoke started importer=true diagnostics=true metal=true ectoPad=true")
+            NSLog("UT99 G2 host smoke started importer=true diagnostics=true metal=true standardTouch=true")
         }
         if CommandLine.arguments.contains("-UT99AutoStart") {
             waitForLandscapeAndAutoStart(attempt: 0)
@@ -1325,7 +1325,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
             message: "Choose a control size preset. Placement, size, opacity, and handedness are saved on this device.",
             preferredStyle: .actionSheet
         )
-        for profile in [GoldenPadTouchOverlay.TouchProfile.ectoPad,
+        for profile in [GoldenPadTouchOverlay.TouchProfile.standard,
                         .compact,
                         .highVisibility] {
             alert.addAction(UIAlertAction(title: profile.title, style: .default) { [weak self] _ in
@@ -1867,7 +1867,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     @objc private func resetHostConfiguration() {
         let defaults = UserDefaults.standard
         ["ut99.input.lookSensitivity", "ut99.input.invertLookY", "ut99.graphics.safeTextures", "ut99.graphics.vsync", "ut99.audio.enabled", "ut99.graphics.frameCap", "ut99.touch.opacity", "ut99.touch.scale", "ut99.touch.profile", "ut99.touch.layout", "ut99.touch.layout.v1", UT99TouchConfiguration.defaultsKey, UT99TouchProfileStore.defaultsKey].forEach { defaults.removeObject(forKey: $0) }
-        touchOverlay.applyTouchProfile(.ectoPad)
+        touchOverlay.applyTouchProfile(.standard)
         touchOverlay.resetTouchLayout()
         statusLabel.text = "Host configuration reset"
     }
@@ -2570,7 +2570,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
             .map { String($0.dropFirst(runIDPrefix.count)) }
             .flatMap { UUID(uuidString: $0)?.uuidString.lowercased() }
             ?? "unspecified"
-        let line = "passed=\(passed) metal=\(metalPresented) importer=\(importPassed) diagnostics=\(diagnosticsPassed) ectoPad=true runID=\(runID)\n"
+        let line = "passed=\(passed) metal=\(metalPresented) importer=\(importPassed) diagnostics=\(diagnosticsPassed) standardTouch=true runID=\(runID)\n"
         try? Data(line.utf8).write(
             to: supportRoot.appendingPathComponent("UT99-g2-smoke.log"),
             options: .atomic

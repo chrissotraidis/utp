@@ -108,15 +108,23 @@ private final class UT99TouchActionButton: UIButton {
 /// drawn. This keeps the host UI and the original engine boundary separate.
 final class GoldenPadTouchOverlay: UIView {
     enum TouchProfile: String {
+        case standard
+        /// Legacy import aliases. New preferences and exports use `standard`.
         case ectoPad
-        /// Retained so older exported profiles continue to import.
         case goldenPad
         case compact
         case highVisibility
 
+        var canonical: TouchProfile {
+            switch self {
+            case .ectoPad, .goldenPad: .standard
+            default: self
+            }
+        }
+
         var title: String {
             switch self {
-            case .ectoPad: "Standard"
+            case .standard, .ectoPad: "Standard"
             case .goldenPad: "Legacy"
             case .compact: "Compact"
             case .highVisibility: "High visibility"
@@ -125,7 +133,7 @@ final class GoldenPadTouchOverlay: UIView {
 
         var scale: CGFloat {
             switch self {
-            case .ectoPad, .goldenPad: 1.0
+            case .standard, .ectoPad, .goldenPad: 1.0
             case .compact: 0.86
             case .highVisibility: 1.12
             }
@@ -136,7 +144,7 @@ final class GoldenPadTouchOverlay: UIView {
             // EctoPad's source default is 0.82. Keeping the same composed
             // opacity prevents solid action faces from reading as opaque HUD
             // panels over a visually dense arena.
-            case .ectoPad, .goldenPad: 0.82
+            case .standard, .ectoPad, .goldenPad: 0.82
             case .compact: 0.68
             case .highVisibility: 0.96
             }
@@ -186,7 +194,7 @@ final class GoldenPadTouchOverlay: UIView {
 
     override init(frame: CGRect) {
         let savedProfile = TouchProfile(rawValue: UserDefaults.standard.string(forKey: Self.profileDefaultsKey) ?? "")
-        touchProfile = savedProfile == .goldenPad ? .ectoPad : (savedProfile ?? .ectoPad)
+        touchProfile = (savedProfile ?? .standard).canonical
         let storedOpacity = UserDefaults.standard.object(forKey: Self.opacityDefaultsKey) as? Double
         touchOpacity = CGFloat(max(0.25, min(1.0, storedOpacity ?? Double(touchProfile.opacity))))
         let storedScale = UserDefaults.standard.object(forKey: Self.scaleDefaultsKey) as? Double
@@ -546,8 +554,8 @@ final class GoldenPadTouchOverlay: UIView {
         placements.removeAll()
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: Self.layoutDefaultsKey)
-        touchProfile = .ectoPad
-        touchOpacity = TouchProfile.ectoPad.opacity
+        touchProfile = .standard
+        touchOpacity = TouchProfile.standard.opacity
         globalScale = 1.0
         defaults.set(touchProfile.rawValue, forKey: Self.profileDefaultsKey)
         defaults.set(Double(touchOpacity), forKey: Self.opacityDefaultsKey)
@@ -872,9 +880,10 @@ final class GoldenPadTouchOverlay: UIView {
 
     func applyTouchProfile(_ profile: TouchProfile) {
         releaseActiveInputs()
-        touchProfile = profile
-        UserDefaults.standard.set(profile.rawValue, forKey: Self.profileDefaultsKey)
-        setTouchOpacity(profile.opacity)
+        let canonical = profile.canonical
+        touchProfile = canonical
+        UserDefaults.standard.set(canonical.rawValue, forKey: Self.profileDefaultsKey)
+        setTouchOpacity(canonical.opacity)
         setNeedsLayout()
     }
 
