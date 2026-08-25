@@ -101,6 +101,11 @@ ditto "$app" "$stage/Payload/UT99Apple.app"
 if [[ "$mode" == "public" ]]; then
   find "$stage/Payload/UT99Apple.app" -name _CodeSignature -type d -prune -exec rm -r {} +
   find "$stage/Payload/UT99Apple.app" -name embedded.mobileprovision -type f -delete
+  while IFS= read -r -d '' candidate; do
+    if file "$candidate" | grep -q 'Mach-O'; then
+      codesign --remove-signature "$candidate"
+    fi
+  done < <(find "$stage/Payload/UT99Apple.app" -type f -print0)
 fi
 rm -f "$ipa"
 (cd "$stage" && /usr/bin/zip -X -q -r "$root/$ipa" Payload)
@@ -122,11 +127,24 @@ if [[ "$mode" == "public" ]] && grep -Eq '(^|/)(_CodeSignature/|embedded\.mobile
   echo "package_local=failed reason=signing_metadata_archived" >&2
   exit 5
 fi
+if [[ "$mode" == "public" ]]; then
+  while IFS= read -r -d '' candidate; do
+    if file "$candidate" | grep -q 'Mach-O' && codesign -d "$candidate" >/dev/null 2>&1; then
+      echo "package_local=failed reason=embedded_code_signature_archived" >&2
+      exit 5
+    fi
+  done < <(find "$stage/Payload/UT99Apple.app" -type f -print0)
+  if rg -a -q "$team" "$stage/Payload/UT99Apple.app"; then
+    echo "package_local=failed reason=development_team_identifier_archived" >&2
+    exit 5
+  fi
+fi
 
-app_binary_sha="$(shasum -a 256 "$app/UT99Apple" | awk '{print $1}')"
-engine_sha="$(shasum -a 256 "$app/Frameworks/UnrealTournament.dylib" | awk '{print $1}')"
+packaged_app="$stage/Payload/UT99Apple.app"
+app_binary_sha="$(shasum -a 256 "$packaged_app/UT99Apple" | awk '{print $1}')"
+engine_sha="$(shasum -a 256 "$packaged_app/Frameworks/UnrealTournament.dylib" | awk '{print $1}')"
 ipa_sha="$(shasum -a 256 "$ipa" | awk '{print $1}')"
-bundle_id="$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")"
+bundle_id="$(plutil -extract CFBundleIdentifier raw "$packaged_app/Info.plist")"
 git_commit="$(git rev-parse HEAD)"
 manifest="$output_dir/manifest-${mode}.json"
 
