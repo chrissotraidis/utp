@@ -1,9 +1,9 @@
 # Unreal Tournament 99 for Apple — Autonomous Agent Goal Loop
 
-**Canonical repository location:** `docs/UT99_Agent_Goal_Loop.md`  
-**Authoritative requirements:** `docs/UT99_Apple_PRD.md`  
-**Project:** Native Unreal Tournament (1999) for iOS and iPadOS  
-**Reference UI repository:** the GoldenPad implementation under `ref/`  
+**Canonical repository location:** `docs/UT99_Agent_Goal_Loop.md`
+**Authoritative requirements:** `docs/UT99_Apple_PRD.md`
+**Project:** Native Unreal Tournament (1999) for iOS and iPadOS
+**Reference UI repository:** EctoPad (`ref/ectopad`, source mirror `/Users/chrissotraidis/GitHub/ectopad`)
 **Execution host:** the current Apple Silicon macOS computer
 
 ---
@@ -12,7 +12,7 @@
 
 Build the product specified in `docs/UT99_Apple_PRD.md` from the current repository to a verified end state, or stop at a mandatory feasibility boundary with a complete evidence-backed report.
 
-The target is a native ARM64 iOS/iPadOS Unreal Tournament 99 client based primarily on the official OldUnreal v469e Apple Silicon build. The finished client must import supported user game data, render through Metal, provide a GoldenPad-quality touch interface and three-dot menu, support controllers and iPad keyboard/mouse, play stock bot matches, and join unmodified compatible UT99 servers.
+The target is a native ARM64 iOS/iPadOS Unreal Tournament 99 client based primarily on the official OldUnreal v469e Apple Silicon build. The finished client must import supported user game data, render through Metal, provide an EctoPad-quality touch interface and three-dot menu, support controllers and iPad keyboard/mouse, play stock bot matches, and join unmodified compatible UT99 servers.
 
 You are authorized to download and install reasonable public prerequisites and reference source code needed to build and test the project. You are not authorized to commit proprietary game data, official OldUnreal binaries, credentials, signing identities, or generated patched engine artifacts.
 
@@ -28,7 +28,7 @@ At the start of every session:
 2. Read `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/KNOWN_ISSUES.md`, and the newest evidence result.
 3. Inspect `git status`, current branch, recent commits, and active worktree changes.
 4. Inspect the repository rather than assuming its layout.
-5. Locate the GoldenPad reference under `ref/` and never modify it.
+5. Locate the EctoPad reference under `ref/ectopad` (or its pristine source mirror) and never modify it.
 6. Identify the highest-priority unmet PRD promotion gate.
 7. Work only on the smallest experiment that can advance or falsify that gate.
 
@@ -118,7 +118,7 @@ It must report without modifying the system:
 - Python/uv;
 - free disk space;
 - current project processes;
-- presence of PRD and GoldenPad reference;
+- presence of PRD and EctoPad reference;
 - presence of local v469e/game-data inputs; and
 - git cleanliness.
 
@@ -273,26 +273,26 @@ If a hard-stop condition is met, do not keep grinding. Produce the stop report a
 
 ### Goal
 
-Understand existing code and the GoldenPad reference before changing anything.
+Understand existing code and the EctoPad reference before changing anything.
 
 ### Actions
 
 1. Inventory files, Xcode projects, schemes, build scripts, docs, and local ignored inputs.
-2. Locate the GoldenPad reference under `ref/`.
-3. Run GoldenPad sequentially on one suitable simulator or device if it builds.
+2. Locate the EctoPad reference under `ref/ectopad` or its pristine source mirror.
+3. Run EctoPad sequentially on one suitable simulator or device if it builds.
 4. Capture touch UI and three-dot menu screenshots.
 5. Identify reusable components and licenses.
-6. Create `docs/REFERENCE_GOLDENPAD.md`.
+6. Create or update `docs/REFERENCE_ECTOPAD.md`.
 7. Establish project naming and target conventions based on the existing repo.
 
 ### Gate
 
 - PRD and loop are present.
-- GoldenPad reference is located and documented.
+- EctoPad reference is located, pinned, and documented.
 - Repo has no unexplained preexisting changes.
 - Initial `docs/STATUS.md` exists.
 
-If GoldenPad is missing, continue engine feasibility work but record the missing UI reference. Do not invent a final UI and claim it matches GoldenPad.
+If EctoPad is missing, continue engine feasibility work but record the missing UI reference. Do not invent a final UI and claim it matches EctoPad.
 
 ---
 
@@ -360,7 +360,7 @@ Build a signed native shell without pretending the engine works.
 4. Add logging/export.
 5. Add importer using fixtures.
 6. Add physical controller discovery.
-7. Add GoldenPad-derived placeholder overlay and three-dot menu.
+7. Add an EctoPad-derived placeholder overlay and three-dot menu.
 8. Add one-runtime guard.
 9. Build for one simulator for UI only.
 10. Shut down simulator.
@@ -499,7 +499,7 @@ Turn working gameplay into a good iPhone/iPad game.
 
 ### Actions
 
-1. Extract GoldenPad design tokens/components.
+1. Extract EctoPad/SunPad touch geometry, visual hierarchy, colors, iconography, and fixed-stick behavior from source and screenshots.
 2. Implement canonical input action model.
 3. Implement touch layout and edit mode.
 4. Map actions to verified UT keys/axes.
@@ -519,7 +519,7 @@ Pass touch-only and controller-only match tests.
 
 ### Goal
 
-Match GoldenPad’s usability and provide complete recovery tools.
+Match EctoPad’s touch usability and provide complete recovery tools.
 
 ### Actions
 
@@ -589,9 +589,9 @@ Use the PRD verbatim.
 
 ---
 
-## 8. GoldenPad UI implementation loop
+## 8. EctoPad UI implementation loop
 
-For each GoldenPad-derived UI feature:
+For each EctoPad-derived UI feature:
 
 1. Locate the exact reference component and behavior.
 2. Capture screenshot/video of the reference.
@@ -603,7 +603,18 @@ For each GoldenPad-derived UI feature:
 8. Store evidence.
 9. Update README screenshots only after behavior is stable.
 
-Do not clone GoldenPad’s game-specific labels or bindings blindly. Reuse its quality, patterns, and components while mapping to UT99 actions.
+EctoPad is the authoritative baseline for iPhone/iPad placement, icon-first faces, target hierarchy, fixed-stick feedback, spacing, opacity, and two-thumb interaction. Map its archetypes semantically to UT99 instead of copying Metroid Prime/GameCube actions blindly:
+
+- EctoPad A archetype → primary fire;
+- B → alternate fire;
+- X → jump;
+- Y → crouch/duck;
+- D-pad up/down/left/right → scores, use, previous weapon, next weapon;
+- START → the original Unreal game menu;
+- left stick → movement/strafe; and
+- C-stick → look/aim.
+
+GoldenPad is a superseded historical reference only. New default-layout decisions and visual acceptance comparisons must use EctoPad.
 
 ---
 
@@ -700,7 +711,7 @@ Do not end with an ambiguous half-working UI branch and no conclusion.
 
 README work begins only after gameplay, but it is a release gate.
 
-1. Re-read GoldenPad README.
+1. Re-read the EctoPad README and source-level touch implementation.
 2. Remove stale claims.
 3. Use physical-device screenshots.
 4. Explain required game data exactly.
@@ -730,7 +741,7 @@ Before declaring completion, verify every item:
 - [ ] Deck16 bot match completes.
 - [ ] CTF-Face loads.
 - [ ] sound and music work.
-- [ ] GoldenPad-derived touch controls are playable.
+- [ ] EctoPad-derived touch controls are playable on both iPhone and iPad.
 - [ ] physical controller works.
 - [ ] iPad keyboard/mouse works or owner accepted documented limitation.
 - [ ] three-dot menu includes all PRD sections.
@@ -760,7 +771,7 @@ Unless the repository already proves a later gate, begin with:
 
 1. Place this file and the PRD under `docs/`.
 2. Run `make doctor` or create it.
-3. Inventory `ref/` and document GoldenPad.
+3. Inventory `ref/` and document EctoPad as the active touch baseline.
 4. Create state/evidence files.
 5. Acquire and hash official v469e macOS release.
 6. Establish the Metal macOS baseline.

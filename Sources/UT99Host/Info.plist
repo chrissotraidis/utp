@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key><string>UT99Apple</string>
+	<key>CFBundleExecutable</key><string>UT99Apple</string>
+	<key>CFBundleIdentifier</key><string>com.ut99apple.client</string>
+	<key>CFBundleName</key><string>UT99Apple</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>0.1</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSRequiresIPhoneOS</key><true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key><true/>
+	<key>UIFileSharingEnabled</key><true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key><true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key><string>com.ut99apple.touch-profile</string>
+			<key>UTTypeDescription</key><string>UT99 Touch Layout</string>
+			<key>UTTypeConformsTo</key><array><string>public.json</string></array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key><array><string>ut99touch</string></array>
+				<key>public.mime-type</key><string>application/json</string>
+			</dict>
+		</dict>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key><string>UT99 uses the local network for LAN games and direct server connections.</string>
+	<key>GCSupportsMultipleMicroGamepads</key><true/>
+	<key>UIRequiresFullScreen</key><true/>
+	<!-- A modern launch-screen declaration is required for native iPad and
+	     iPhone scene dimensions. Without it iOS may expose the legacy
+	     1024x768 compatibility canvas before SDL creates its Metal surface. -->
+	<key>UILaunchScreen</key><dict/>
+	<key>UIApplicationSceneManifest</key>
+	<dict><key>UIApplicationSupportsMultipleScenes</key><false/><key>UISceneConfigurations</key><dict><key>UIWindowSceneSessionRoleApplication</key><array><dict><key>UISceneConfigurationName</key><string>Default Configuration</string><key>UISceneDelegateClassName</key><string>$(PRODUCT_MODULE_NAME).SceneDelegate</string></dict></array></dict></dict>
+	<key>UIInterfaceOrientation</key><string>UIInterfaceOrientationLandscapeLeft</string>
+	<key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+	<key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+</dict>
+</plist>

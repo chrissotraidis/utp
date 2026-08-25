@@ -7,7 +7,7 @@
 **Internal working name:** `UT99Apple`  
 **Primary product:** Native Unreal Tournament (1999) client for iOS and iPadOS  
 **Reference desktop build:** OldUnreal Unreal Tournament v469e for macOS  
-**UI reference:** The GoldenPad repository placed under `ref/`
+**UI reference:** EctoPad under `ref/ectopad` (source mirror `/Users/chrissotraidis/GitHub/ectopad`)
 
 ---
 
@@ -21,7 +21,7 @@ This is **not** a browser port, streamed game, Windows compatibility layer, x86 
 2. Import supported Unreal Tournament game data from a folder or canonical ZIP.
 3. Launch the original game.
 4. Play bot matches, single-player ladders, LAN games, and online multiplayer.
-5. Use a physical controller, keyboard and mouse on iPad, or a polished GoldenPad-derived touch interface.
+5. Use a physical controller, keyboard and mouse on iPad, or a polished EctoPad-derived touch interface.
 
 The modern macOS version already solves several of the hardest platform problems. OldUnreal v469e supports Apple Silicon, uses SDL-based window management, contains a native Metal renderer called Fruit Company Renderer (`FruCoRe`/`Frucore`), and is the current official OldUnreal release recommended for online play. However, OldUnreal’s complete modified engine source is not publicly available. The public 469 SDK is a development SDK, not a complete buildable engine tree. Therefore the primary independent strategy is a **bounded binary-rehosting project**:
 
@@ -74,14 +74,14 @@ The product is successful when an iPad or iPhone can:
 - Establish a flawless, reproducible v469e macOS reference installation using Metal.
 - Build an iOS/iPadOS host application that can run the v469e ARM64 game engine natively.
 - Support iPhone and iPad in landscape orientation.
-- Deliver a high-quality custom touch controller based on GoldenPad.
+- Deliver a high-quality custom touch controller based on EctoPad's measured iPhone/iPad interface.
 - Support physical controllers, keyboard, and mouse.
 - Support sound effects, music, voice/announcer audio, and correct audio interruption behavior.
 - Import and validate game data from common GOTY distributions, including Steam-origin data when available to the user.
 - Preserve online compatibility with current community master servers and direct-address v469 servers.
 - Provide an excellent three-dot host menu for controls, data management, diagnostics, logs, and recovery.
 - Produce complete build, architecture, testing, provenance, and troubleshooting documentation.
-- End with a current README modeled on the quality and clarity of the GoldenPad reference README.
+- End with a current README modeled on the quality and clarity of the EctoPad reference README.
 
 ### 3.2 Secondary goals
 
@@ -306,11 +306,11 @@ Shared Swift/C++ data validation and import library. Used by both the macOS prep
 
 #### `UT99TouchUI`
 
-GoldenPad-derived custom touch interface and layout editor. Emits a canonical action state independent of engine implementation.
+EctoPad-derived custom touch interface and layout editor. Emits a canonical action state independent of engine implementation.
 
 #### `UT99InputBridge`
 
-Normalizes GoldenPad touch, `GCController`, keyboard, mouse, and optional gyro into engine key/axis events.
+Normalizes EctoPad-derived touch, `GCController`, keyboard, mouse, and optional gyro into engine key/axis events.
 
 #### `UT99Diagnostics`
 
@@ -321,7 +321,7 @@ Collects host logs, engine logs, binary audit fingerprints, device details, rend
 ```text
 UIApplication / UT99HostViewController
         ├── Game-data importer and validator
-        ├── GoldenPad touch overlay
+        ├── EctoPad-derived touch overlay
         ├── Three-dot menu and diagnostics
         └── UT99RuntimeBridge
                  ├── patched v469e engine image
@@ -384,7 +384,7 @@ The agent should converge on the following structure, adapting only when the exi
 │       ├── gameplay/
 │       └── multiplayer/
 ├── ref/
-│   ├── GoldenPad/                     # or the supplied reference repo name
+│   ├── ectopad/                       # pristine active touch reference
 │   ├── OldUnreal/                     # read-only research/reference checkouts
 │   └── BinaryRehosting/               # LiveContainer/maciOS research, if used
 ├── Sources/
@@ -691,7 +691,7 @@ Before loading UT, create a native app that demonstrates:
 
 - landscape iPhone and iPad layouts;
 - a Metal-backed game surface;
-- safe-area-aware GoldenPad overlay placeholder;
+- safe-area-aware EctoPad-derived overlay placeholder;
 - right-side three-dot button and menu;
 - file importer;
 - unified logging;
@@ -726,7 +726,7 @@ Never launch a second engine instance because the user taps twice. Transitions a
 - Host builds for iOS device and iPadOS device.
 - Host launches on physical iPad.
 - Metal surface presents.
-- GoldenPad placeholder and menu remain responsive.
+- EctoPad-derived overlay and menu remain responsive.
 - Importer can copy and validate a test fixture.
 - Logs export correctly.
 
@@ -925,11 +925,11 @@ Prefer OldUnreal’s ALAudio path with an iOS-compatible OpenAL Soft build. Rebu
 
 ---
 
-## 19. Input and GoldenPad touch UI
+## 19. Input and EctoPad touch UI
 
-### 19.1 GoldenPad reference requirement
+### 19.1 EctoPad reference requirement
 
-At the beginning of UI work, the agent must inspect the repository under `ref/` and identify the GoldenPad implementation. It must document:
+At the beginning of UI work, the agent must inspect `ref/ectopad` and the pristine EctoPad source implementation. It must document:
 
 - project/target names;
 - touch-control components;
@@ -941,7 +941,7 @@ At the beginning of UI work, the agent must inspect the repository under `ref/` 
 - diagnostics/log UI; and
 - README structure.
 
-Capture reference screenshots and an interaction map under `docs/evidence/reference-goldenpad/`. Do not modify the reference repository.
+Capture reference screenshots and an interaction map under `docs/evidence/reference-ectopad/`. Do not modify the reference repository. EctoPad is the acceptance baseline for placement, hierarchy, icon-first faces, fixed-stick feedback, translucency, spacing, and two-thumb behavior on both iPhone and iPad. GoldenPad remains historical context only.
 
 ### 19.2 Canonical action model
 
@@ -969,17 +969,17 @@ The engine adapter maps them to verified UT input names/axes.
 
 ### 19.3 Default touch layout
 
-- Left virtual stick: movement and strafe.
-- Right look region or right stick: yaw/pitch with acceleration and sensitivity controls.
-- Primary fire: large right-side button reachable while aiming.
-- Alternate fire: distinct adjacent button.
-- Jump and crouch: thumb-accessible, visually distinct.
-- Weapon next/previous: shoulder-style edge buttons or vertical pair.
-- Activate item/use and scoreboard: smaller contextual controls.
+- Left EctoPad-style fixed stick: movement and strafe.
+- Right yellow EctoPad-style fixed stick: yaw/pitch with acceleration and sensitivity controls.
+- Primary fire: dominant green A-archetype target reachable while aiming.
+- Alternate fire: red B-archetype target adjacent to primary fire.
+- Jump and crouch: light X/Y-archetype targets in the right-thumb cluster.
+- Scores/use/previous weapon/next weapon: compact D-pad up/down/left/right semantics.
+- Original Unreal menu: separate START-pill archetype.
 - Three-dot host menu: fixed on the right edge, safe-area aware, always reachable.
 - Pause/game menu: separate from host menu.
 
-The layout must not require more than two simultaneous thumbs for ordinary combat.
+The layout must not require more than two simultaneous thumbs for ordinary combat. EctoPad's game-specific labels and bindings are not copied: its A/B/X/Y/D-pad/START control archetypes are adapted to UT99's verified action model.
 
 ### 19.4 Touch configuration
 
@@ -1028,7 +1028,7 @@ On iPad:
 ### 20.1 Placement and behavior
 
 - Fixed on the right edge in landscape.
-- GoldenPad visual language.
+- EctoPad visual language.
 - Above the game surface and touch controls.
 - Single tap opens; tapping outside or Resume closes.
 - Opening immediately releases all gameplay touch states.
@@ -1043,7 +1043,7 @@ Return to game.
 Controller mapping, touch sensitivity, invert axis, gyro, keyboard/mouse, auto-hide touch controls.
 
 #### Touch Layout
-Enter GoldenPad-style layout editor, presets, reset, export/import profile.
+Enter EctoPad-derived layout editor, presets, reset, export/import profile.
 
 #### Graphics
 Resolution scale, frame cap, ProMotion option, MSAA, texture/detail toggles exposed safely by FruCoRe, FPS counter.
@@ -1239,7 +1239,7 @@ Every major gate gets a dated evidence folder with:
 
 ### Input/UI
 
-- **FR-020:** The app shall ship a GoldenPad-derived touch layout.
+- **FR-020:** The app shall ship an EctoPad-derived touch layout for iPhone and iPad, measured from the reference rather than approximated.
 - **FR-021:** The app shall support a layout editor and persistent profiles.
 - **FR-022:** The app shall support physical extended gamepads.
 - **FR-023:** The iPad app shall support keyboard and mouse.
@@ -1339,7 +1339,7 @@ The project is complete only when:
 5. The original menu and a complete bot match work.
 6. FruCoRe/Metal renders correctly enough for normal play.
 7. Sound and music work.
-8. GoldenPad-derived touch controls provide a genuinely playable experience.
+8. EctoPad-derived touch controls provide a genuinely playable experience on iPhone and iPad.
 9. Physical controller works.
 10. iPad keyboard/mouse works or any hardware limitation is explicitly documented and accepted.
 11. The three-dot menu includes controls, data, diagnostics, logs, and recovery.
@@ -1348,7 +1348,7 @@ The project is complete only when:
 14. No prohibited game data or binaries are committed.
 15. All third-party licenses and provenance are documented.
 16. `docs/` reflects the final implementation rather than the original plan.
-17. README is current, screenshot-backed, and at least as useful as GoldenPad’s reference README.
+17. README is current, screenshot-backed, and at least as useful as EctoPad’s reference README.
 18. No extra simulator or stale game instance remains running after tests.
 
 ---
@@ -1414,11 +1414,11 @@ The final README must include:
 - troubleshooting and log export;
 - known issues;
 - license/provenance table;
-- Epic, OldUnreal, SDL, GoldenPad, and contributor credits;
+- Epic, OldUnreal, SDL, EctoPad, and contributor credits;
 - no-asset/no-affiliation disclaimer; and
 - evidence-backed completion status.
 
-Use GoldenPad’s README as a quality and structure reference, not as text to copy blindly.
+Use EctoPad’s README as a quality and structure reference, not as text to copy blindly.
 
 ---
 
@@ -1474,7 +1474,7 @@ Verified macOS v469e baseline
 → FruCoRe Metal first frame
 → original menu and bot match
 → audio
-→ GoldenPad touch/controller UX
+→ EctoPad touch/controller UX
 → lifecycle/stability
 → unmodified online server interoperability
 → packaging, documentation, and README

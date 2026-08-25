@@ -1,0 +1,33 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.cache/
+build/
+local/
+ref/
+
+# Raw runtime evidence is retained locally. Commit the human-readable result
+# ledger so a clean checkout has gate history without hundreds of megabytes of
+# screenshots, engine logs, archives, or user-specific simulator paths.
+docs/evidence/**
+!docs/evidence/**/
+!docs/evidence/**/RESULT.md
+!docs/evidence/index.md
+
+ref/**/*.dmg
+ref/**/*.app/
+ref/**/*.zip
+ref/**/*.tar.*
+ref/**/*.iso
+ref/**/*.u
+ref/**/*.utx
+ref/**/*.umx
+ref/**/*.unr
+ref/GoldenPad/
+ref/FullGameInstallers/
+ref/SDL2/
+ref/OpenAL-Soft/
+ref/mpg123/
+ref/mpg123-*.tar.*
+ref/libsndfile/
+ref/libxmp/

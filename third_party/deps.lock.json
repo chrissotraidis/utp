@@ -1,0 +1,60 @@
+{
+  "inputs": [
+    {
+      "name": "OldUnreal Unreal Tournament v469e macOS",
+      "version": "v469e",
+      "url": "https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e",
+      "sha256": "b6b3a1f462e4b702df0eecf90d663ef1f847cc36aadca1ec6dd35278d091fa0d",
+      "license": "Upstream release terms; user-supplied proprietary game/runtime input",
+      "ships_in_app": false,
+      "purpose": "Local feasibility audit reference"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "SDL2",
+      "version": "release-2.32.10",
+      "commit": "5d249570393f7a37e037abf22cd6012a4cc56a71",
+      "url": "https://github.com/libsdl-org/SDL",
+      "license": "zlib",
+      "ships_in_app": "planned",
+      "purpose": "iOS replacement for the desktop SDL2 image"
+    },
+    {
+      "name": "OpenAL Soft",
+      "version": "shallow clone",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "url": "https://github.com/kcat/openal-soft",
+      "license": "LGPL-2.0-or-later",
+      "ships_in_app": "planned",
+      "purpose": "iOS OpenAL replacement for startup/audio feasibility"
+    },
+    {
+      "name": "mpg123",
+      "version": "1.33.6",
+      "sha256": "929a7c18ba662b8927aed4de229ad9ae8ab2b4806dd0f30b90113eb1b4e2195a",
+      "url": "https://www.mpg123.de/",
+      "license": "LGPL-2.1-or-later",
+      "ships_in_app": "planned",
+      "purpose": "iOS MPEG decoder replacement"
+    },
+    {
+      "name": "libsndfile",
+      "version": "shallow clone",
+      "commit": "7ff854d1e0bd9a751a9ff52ed980c62afced91fe",
+      "url": "https://github.com/libsndfile/libsndfile",
+      "license": "LGPL-2.1-or-later",
+      "ships_in_app": "planned",
+      "purpose": "iOS audio-file replacement"
+    },
+    {
+      "name": "libxmp",
+      "version": "shallow clone",
+      "commit": "a13276d27feabcf9ee4f982913f718ee05a65cb7",
+      "url": "https://github.com/libxmp/libxmp",
+      "license": "MIT-like; see docs/COPYING",
+      "ships_in_app": "planned",
+      "purpose": "iOS tracker-music replacement"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000201 /* AppDelegate.swift */; };
+		100000000000000000000102 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000202 /* SceneDelegate.swift */; };
+		100000000000000000000103 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000203 /* GameViewController.swift */; };
+		100000000000000000000107 /* UT99EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000209 /* UT99EngineBridge.swift */; };
+		100000000000000000000108 /* GoldenPadTouchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000210 /* GoldenPadTouchOverlay.swift */; };
+		100000000000000000000109 /* UT99ZipInflate.c in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000211 /* UT99ZipInflate.c */; };
+		100000000000000000000110 /* UT99ZipArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000212 /* UT99ZipArchive.swift */; };
+		100000000000000000000111 /* UT99DataImportTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000213 /* UT99DataImportTransaction.swift */; };
+		100000000000000000000112 /* UT99DataImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000214 /* UT99DataImporter.swift */; };
+		100000000000000000000113 /* UT99TouchLayoutGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000215 /* UT99TouchLayoutGeometry.swift */; };
+		100000000000000000000114 /* UT99RuntimeRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000216 /* UT99RuntimeRecovery.swift */; };
+		100000000000000000000115 /* UT99DiagnosticsArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000217 /* UT99DiagnosticsArchive.swift */; };
+		100000000000000000000116 /* UT99TouchConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000218 /* UT99TouchConfiguration.swift */; };
+		100000000000000000000117 /* UT99TouchProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000219 /* UT99TouchProfileStore.swift */; };
+		100000000000000000000104 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000204 /* UIKit.framework */; };
+		100000000000000000000105 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000205 /* Metal.framework */; };
+		100000000000000000000106 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000206 /* MetalKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		100000000000000000000201 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		100000000000000000000202 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		100000000000000000000203 /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
+		100000000000000000000204 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		100000000000000000000205 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		100000000000000000000206 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		100000000000000000000207 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		100000000000000000000208 /* UT99Apple.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UT99Apple.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000209 /* UT99EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99EngineBridge.swift; sourceTree = "<group>"; };
+		100000000000000000000210 /* GoldenPadTouchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenPadTouchOverlay.swift; sourceTree = "<group>"; };
+		100000000000000000000211 /* UT99ZipInflate.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = UT99ZipInflate.c; sourceTree = "<group>"; };
+		100000000000000000000212 /* UT99ZipArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99ZipArchive.swift; sourceTree = "<group>"; };
+		100000000000000000000213 /* UT99DataImportTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99DataImportTransaction.swift; sourceTree = "<group>"; };
+		100000000000000000000214 /* UT99DataImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99DataImporter.swift; sourceTree = "<group>"; };
+		100000000000000000000215 /* UT99TouchLayoutGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99TouchLayoutGeometry.swift; sourceTree = "<group>"; };
+		100000000000000000000216 /* UT99RuntimeRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99RuntimeRecovery.swift; sourceTree = "<group>"; };
+		100000000000000000000217 /* UT99DiagnosticsArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99DiagnosticsArchive.swift; sourceTree = "<group>"; };
+		100000000000000000000218 /* UT99TouchConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99TouchConfiguration.swift; sourceTree = "<group>"; };
+		100000000000000000000219 /* UT99TouchProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UT99TouchProfileStore.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		100000000000000000000301 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000104, 100000000000000000000105, 100000000000000000000106,); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100000000000000000000401 = {isa = PBXGroup; children = (100000000000000000000402, 100000000000000000000403, 100000000000000000000404,); sourceTree = "<group>"; };
+		100000000000000000000402 /* UT99Host */ = {isa = PBXGroup; children = (100000000000000000000201, 100000000000000000000202, 100000000000000000000203, 100000000000000000000207, 100000000000000000000209, 100000000000000000000210, 100000000000000000000211, 100000000000000000000212, 100000000000000000000213, 100000000000000000000214, 100000000000000000000215, 100000000000000000000216, 100000000000000000000217, 100000000000000000000218, 100000000000000000000219,); path = Sources/UT99Host; sourceTree = "<group>"; };
+		100000000000000000000403 /* Frameworks */ = {isa = PBXGroup; children = (100000000000000000000204, 100000000000000000000205, 100000000000000000000206,); name = Frameworks; sourceTree = "<group>"; };
+		100000000000000000000404 /* Products */ = {isa = PBXGroup; children = (100000000000000000000208,); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		100000000000000000000501 /* UT99Apple */ = {isa = PBXNativeTarget; buildConfigurationList = 100000000000000000000801; buildPhases = (100000000000000000000601, 100000000000000000000301, 100000000000000000000602, 100000000000000000000603,); buildRules = (); dependencies = (); name = UT99Apple; productName = UT99Apple; productReference = 100000000000000000000208; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		100000000000000000000502 /* Project object */ = {isa = PBXProject; attributes = {LastUpgradeCheck = 2600; TargetAttributes = {100000000000000000000501 = {CreatedOnToolsVersion = 26.0;};};}; buildConfigurationList = 100000000000000000000802; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = 100000000000000000000401; productRefGroup = 100000000000000000000404; projectDirPath = ""; projectRoot = ""; targets = (100000000000000000000501,); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		100000000000000000000602 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		100000000000000000000603 /* Embed diagnostic engine */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			name = "Embed diagnostic engine";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nif [ \"${UT99_ENGINE_EMBED:-0}\" != \"1\" ]; then exit 0; fi\ncase \"${SDK_NAME:-}\" in\n  iphoneos*) engine_dir=\"$SRCROOT/build/ios-engine\"; sdl_dir=\"$SRCROOT/build/sdl2-shared-ios/Build/Products/Release-iphoneos\" ;;\n  iphonesimulator*) engine_dir=\"$SRCROOT/build/ios-engine-ios-sim\"; sdl_dir=\"$SRCROOT/build/sdl2-shared-sim-ios/Build/Products/Release-iphonesimulator\" ;;\n  *) echo 'UT99_ENGINE_EMBED requires an iOS device or simulator SDK' >&2; exit 2 ;;\nesac\ndest=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nmkdir -p \"$dest\"\ncp \"$engine_dir/UnrealTournament.dylib\" \"$dest/UnrealTournament.dylib\"\ncp \"$engine_dir/UT99DesktopShim.dylib\" \"$dest/UT99DesktopShim.dylib\"\ncp \"$sdl_dir/libSDL2.dylib\" \"$dest/libSDL2.dylib\"\nfor file in \"$engine_dir\"/deps/*.dylib; do cp \"$file\" \"$dest/\"; done\nfor file in \"$dest\"/*.dylib; do codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \"$file\"; done\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		100000000000000000000601 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000101, 100000000000000000000102, 100000000000000000000107, 100000000000000000000108, 100000000000000000000103, 100000000000000000000109, 100000000000000000000110, 100000000000000000000111, 100000000000000000000112, 100000000000000000000113, 100000000000000000000114, 100000000000000000000115, 100000000000000000000116, 100000000000000000000117,); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		100000000000000000000901 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CLANG_ENABLE_MODULES = YES; CODE_SIGNING_ALLOWED = NO; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; INFOPLIST_FILE = Sources/UT99Host/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lz"; PRODUCT_BUNDLE_IDENTIFIER = com.ut99apple.client; PRODUCT_NAME = UT99Apple; SDKROOT = iphoneos; SWIFT_OBJC_BRIDGING_HEADER = Sources/UT99Host/UT99Apple-Bridging-Header.h; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		100000000000000000000902 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGNING_ALLOWED = NO; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; INFOPLIST_FILE = Sources/UT99Host/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lz"; PRODUCT_BUNDLE_IDENTIFIER = com.ut99apple.client; PRODUCT_NAME = UT99Apple; SDKROOT = iphoneos; SWIFT_OBJC_BRIDGING_HEADER = Sources/UT99Host/UT99Apple-Bridging-Header.h; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		100000000000000000000903 /* Project Debug */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_OBJC_ARC = YES;}; name = Debug; };
+		100000000000000000000904 /* Project Release */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_OBJC_ARC = YES;}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		100000000000000000000801 /* Build configuration list for PBXNativeTarget "UT99Apple" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000901, 100000000000000000000902,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		100000000000000000000802 /* Build configuration list for PBXProject "UT99Apple" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000903, 100000000000000000000904,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = 100000000000000000000502 /* Project object */;
+}

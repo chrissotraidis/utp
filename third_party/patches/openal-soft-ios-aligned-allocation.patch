@@ -1,0 +1,14 @@
+diff --git a/common/almalloc.cpp b/common/almalloc.cpp
+index 9818f69..c6d78a1 100644
+--- a/common/almalloc.cpp
++++ b/common/almalloc.cpp
+@@ -3,7 +3,8 @@
+ 
+ #if defined(__APPLE__)
+ #include <AvailabilityMacros.h>
++#include <TargetConditionals.h>
+ 
+-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 101300
++#if TARGET_OS_OSX && defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 101300
+ 
+ #include <stdlib.h>
