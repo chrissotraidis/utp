@@ -33,6 +33,7 @@ if [[ -e "$output_dir" ]]; then
   echo "sdl_source=quarantined path=$quarantine/SDL2-UT99"
 fi
 
+mkdir -p "$root/build/sources"
 staging="$(mktemp -d "$root/build/sources/.SDL2-UT99.XXXXXX")"
 cleanup() { rm -rf "$staging"; }
 trap cleanup EXIT
