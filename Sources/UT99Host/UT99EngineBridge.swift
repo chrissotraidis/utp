@@ -558,6 +558,212 @@ final class UT99EngineBridge {
         }
     }
 
+    /// Readiness-gated meaningful-session probe for one remote v469 server.
+    /// This stays above the original protocol: it waits for the engine's own
+    /// welcome/possession records, then publishes the same SDL input events as
+    /// touch, keyboard, and mouse. It is Simulator diagnostic evidence only.
+    func runNetworkSessionSmokeTest() {
+        let stdoutURL = applicationSupportRoot().appendingPathComponent("UT99-engine.stdout")
+        let baseline = (try? stdoutURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        resetNetworkSessionSmokeLog()
+        appendNetworkSessionSmokeLog("scheduled baselineOffset=\(baseline)")
+        waitForNetworkSessionReady(stdoutURL: stdoutURL, baselineOffset: baseline, attempt: 0)
+    }
+
+    private func waitForNetworkSessionReady(stdoutURL: URL, baselineOffset: Int, attempt: Int) {
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(2)) { [weak self] in
+            guard let self else { return }
+            let data = (try? Data(contentsOf: stdoutURL)) ?? Data()
+            let offset = min(max(0, baselineOffset), data.count)
+            let text = String(decoding: data.dropFirst(offset), as: UTF8.self)
+            if let welcome = text.range(of: "Welcomed by server"),
+               text[welcome.upperBound...].contains("Possessed PlayerPawn") {
+                let level = text[welcome.lowerBound...]
+                    .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true)
+                    .first.map(String.init) ?? "Welcomed by server"
+                self.appendNetworkSessionSmokeLog("ready \(level)")
+                self.runMeaningfulNetworkSessionSequence()
+                return
+            }
+            guard attempt < 59 else {
+                self.appendNetworkSessionSmokeLog("timeout waiting for remote welcome and possession")
+                return
+            }
+            if attempt > 0, attempt % 10 == 0 {
+                self.appendNetworkSessionSmokeLog("waiting attempt=\(attempt)")
+            }
+            self.waitForNetworkSessionReady(
+                stdoutURL: stdoutURL,
+                baselineOffset: baselineOffset,
+                attempt: attempt + 1
+            )
+        }
+    }
+
+    private func runMeaningfulNetworkSessionSequence() {
+        let schedule: (Int, @escaping () -> Void) -> Void = { milliseconds, work in
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                deadline: .now() + .milliseconds(milliseconds),
+                execute: work
+            )
+        }
+        let action: (GoldenPadTouchOverlay.Action, Bool) -> Void = { [weak self] input, pressed in
+            self?.publishTouchAction(input, pressed: pressed)
+        }
+
+        appendNetworkSessionSmokeLog("phase=spawn fire=true")
+        action(.primaryFire, true)
+        action(.primaryFire, false)
+
+        schedule(700) { [weak self] in
+            self?.appendNetworkSessionSmokeLog("phase=combat movement=forward-right look=active fire=true")
+            self?.publishTouchMove(CGPoint(x: 0.72, y: 0.92), active: true)
+            self?.publishTouchLook(CGPoint(x: 0.28, y: -0.08), active: true)
+            action(.primaryFire, true)
+            action(.primaryFire, false)
+        }
+        schedule(2_500) { [weak self] in
+            self?.appendNetworkSessionSmokeLog("phase=combat look=second-step fire=true")
+            self?.publishTouchLook(CGPoint(x: -0.22, y: 0.06), active: true)
+            action(.primaryFire, true)
+            action(.primaryFire, false)
+        }
+        schedule(4_000) { [weak self] in
+            self?.publishTouchMove(.zero, active: false)
+            self?.publishTouchLook(.zero, active: false)
+            self?.appendNetworkSessionSmokeLog("phase=combat movement=released look=released")
+        }
+        schedule(5_000) { [weak self] in
+            self?.submitConsoleCommand("say ios469 session check")
+            self?.appendNetworkSessionSmokeLog("phase=chat command=submitted")
+        }
+        schedule(10_000) { [weak self] in
+            action(.scoreboard, true)
+            self?.appendNetworkSessionSmokeLog("phase=scoreboard visible=true")
+        }
+        schedule(11_500) { [weak self] in
+            action(.scoreboard, false)
+            self?.appendNetworkSessionSmokeLog("phase=scoreboard visible=false")
+        }
+        schedule(13_000) { [weak self] in
+            self?.submitConsoleCommand("suicide")
+            self?.appendNetworkSessionSmokeLog("phase=death command=suicide-submitted")
+        }
+        schedule(22_000) { [weak self] in
+            action(.primaryFire, true)
+            action(.primaryFire, false)
+            self?.appendNetworkSessionSmokeLog("phase=respawn attempt=1 fire=true")
+        }
+        schedule(28_000) { [weak self] in
+            action(.primaryFire, true)
+            action(.primaryFire, false)
+            self?.appendNetworkSessionSmokeLog("phase=respawn attempt=2 fire=true")
+        }
+        schedule(30_000) { [weak self] in
+            self?.publishTouchMove(CGPoint(x: -0.58, y: 0.88), active: true)
+            self?.publishTouchLook(CGPoint(x: 0.18, y: 0.04), active: true)
+            action(.primaryFire, true)
+            action(.primaryFire, false)
+            self?.appendNetworkSessionSmokeLog("phase=post-respawn movement=forward-left fire=true")
+        }
+        schedule(33_000) { [weak self] in
+            self?.publishTouchMove(.zero, active: false)
+            self?.publishTouchLook(.zero, active: false)
+            self?.appendNetworkSessionSmokeLog("phase=post-respawn movement=released look=released")
+        }
+        schedule(35_000) { [weak self] in
+            self?.submitConsoleCommand("stat net")
+            self?.appendNetworkSessionSmokeLog("phase=network-stats command=submitted")
+        }
+        schedule(40_000) { [weak self] in
+            self?.appendNetworkSessionSmokeLog("phase=session-input-sequence complete=true")
+        }
+        schedule(55_000) { [weak self] in
+            self?.runStockMenuDisconnect()
+        }
+    }
+
+    /// Exercise the same stock UMenu route a player uses instead of relying on
+    /// a typed console command: Escape, Multiplayer, Disconnect from Server.
+    /// The menu's fifth selectable item is Disconnect (separator rows are
+    /// skipped by UWindow's keyboard navigation).
+    private func runStockMenuDisconnect() {
+        let stdoutURL = applicationSupportRoot().appendingPathComponent("UT99-engine.stdout")
+        let baseline = (try? stdoutURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let keyPress: (Int32) -> Void = { [weak self] key in
+            self?.pushKey(key: key, pressed: true)
+            self?.pushKey(key: key, pressed: false)
+        }
+        let schedule: (Int, @escaping () -> Void) -> Void = { milliseconds, work in
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                deadline: .now() + .milliseconds(milliseconds),
+                execute: work
+            )
+        }
+
+        appendNetworkSessionSmokeLog("phase=disconnect route=stock-menu open=true")
+        keyPress(27) // Escape opens the original Unreal menu.
+        schedule(350) { [weak self] in
+            self?.appendNetworkSessionSmokeLog("phase=disconnect route=stock-menu multiplayer=true")
+            keyPress((1 << 30) | 79) // Right arrow selects Multiplayer.
+        }
+        for index in 0..<5 {
+            schedule(600 + index * 180) {
+                keyPress((1 << 30) | 81) // Down arrow; fifth item is Disconnect.
+            }
+        }
+        schedule(1_650) { [weak self] in
+            guard let self else { return }
+            keyPress(13) // Return executes Disconnect from Server.
+            self.appendNetworkSessionSmokeLog("phase=disconnect route=stock-menu submitted=true")
+            self.verifyNetworkDisconnect(
+                stdoutURL: stdoutURL,
+                baselineOffset: baseline,
+                attempt: 0
+            )
+        }
+    }
+
+    private func verifyNetworkDisconnect(stdoutURL: URL, baselineOffset: Int, attempt: Int) {
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(1)) { [weak self] in
+            guard let self else { return }
+            let data = (try? Data(contentsOf: stdoutURL)) ?? Data()
+            let offset = min(max(0, baselineOffset), data.count)
+            let text = String(decoding: data.dropFirst(offset), as: UTF8.self)
+            let normalized = text.lowercased()
+            if normalized.contains("browse: index.unr?failed"),
+               normalized.contains("failed; returning to entry"),
+               normalized.contains("possessed playerpawn"),
+               normalized.contains(" entry.") {
+                self.appendNetworkSessionSmokeLog(
+                    "phase=disconnect verified=true route=stock-menu destination=Entry"
+                )
+                self.appendNetworkSessionSmokeLog("complete")
+                return
+            }
+            guard attempt < 14 else {
+                self.appendNetworkSessionSmokeLog("phase=disconnect verified=false timeout=true")
+                return
+            }
+            self.verifyNetworkDisconnect(
+                stdoutURL: stdoutURL,
+                baselineOffset: baselineOffset,
+                attempt: attempt + 1
+            )
+        }
+    }
+
+    private func submitConsoleCommand(_ command: String) {
+        pushKey(key: 9, pressed: true) // Tab=Type in the staged stock User.ini.
+        pushKey(key: 9, pressed: false)
+        for byte in command.utf8 where byte >= 0x20 && byte <= 0x7e {
+            pushKey(key: Int32(byte), pressed: true)
+            pushKey(key: Int32(byte), pressed: false)
+        }
+        pushKey(key: 13, pressed: true)
+        pushKey(key: 13, pressed: false)
+    }
+
     /// Diagnostic-only stock-browser probe for Simulator. This deliberately
     /// enters the original UWindow menu and clicks the original "UT Servers"
     /// tab through SDL_PushEvent; it does not stand in for physical-device
@@ -738,6 +944,38 @@ final class UT99EngineBridge {
             withIntermediateDirectories: true
         )
         try? Data().write(to: url, options: .atomic)
+    }
+
+    private func applicationSupportRoot() -> URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Unreal Tournament", isDirectory: true)
+    }
+
+    private func networkSessionSmokeLogURL() -> URL {
+        applicationSupportRoot().appendingPathComponent("UT99-network-session-smoke.log")
+    }
+
+    private func resetNetworkSessionSmokeLog() {
+        let url = networkSessionSmokeLogURL()
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try? Data().write(to: url, options: .atomic)
+    }
+
+    private func appendNetworkSessionSmokeLog(_ line: String) {
+        let url = networkSessionSmokeLogURL()
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let data = Data((timestamp + " " + line + "\n").utf8)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: data)
+            try? handle.close()
+        } else {
+            try? data.write(to: url, options: .atomic)
+        }
+        NSLog("UT99 network-session smoke %@", line)
     }
 
     private func appendServerBrowserSmokeLog(_ line: String) {

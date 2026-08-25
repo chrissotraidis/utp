@@ -483,6 +483,9 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         } else if CommandLine.arguments.contains("-UT99ServerBrowserPointerSmokeTest") {
             engineBridge.runServerBrowserPointerSmokeTest()
         }
+        if CommandLine.arguments.contains("-UT99NetworkSessionSmokeTest") {
+            engineBridge.runNetworkSessionSmokeTest()
+        }
         if CommandLine.arguments.contains("-UT99MenuSmokeTest") {
             runMenuSmokeTest()
         }

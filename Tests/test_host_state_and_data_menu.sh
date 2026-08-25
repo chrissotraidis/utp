@@ -133,6 +133,16 @@ rg -Fq -- '-UT99ServerBrowserPointerSmokeTest' Sources/UT99Host/GameViewControll
 rg -Fq 'func runServerBrowserPointerSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq -- '-UT99ServerBrowserJoinSmokeTest' Sources/UT99Host/GameViewController.swift
 rg -Fq 'func runServerBrowserJoinSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq -- '-UT99NetworkSessionSmokeTest' Sources/UT99Host/GameViewController.swift
+rg -Fq 'func runNetworkSessionSmokeTest()' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'text[welcome.upperBound...].contains("Possessed PlayerPawn")' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'submitConsoleCommand("say ios469 session check")' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'submitConsoleCommand("suicide")' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'submitConsoleCommand("stat net")' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'func runStockMenuDisconnect()' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'phase=disconnect route=stock-menu submitted=true' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'phase=session-input-sequence complete=true' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'phase=disconnect verified=true route=stock-menu destination=Entry' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'press UT Servers x=480 y=23' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'move to UT Servers x=480 y=23' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'move to first server row x=600 y=60' Sources/UT99Host/UT99EngineBridge.swift
