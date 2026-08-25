@@ -2,6 +2,10 @@
 
 ## Current state
 
+Online play is a launch-critical product feature. It is already functional in the bounded Simulator sense: the original v469 browser populated 775 listed servers, browser-row joining worked, direct connect worked, data-only server packages downloaded, the player moved/fired/died/respawned, a natural map transition completed, and the original disconnect path returned to Entry. This is a credible basis for “UT99 online on iPad/iPhone,” but public release copy must wait for physical-device networking and another-player/observer validation.
+
+OldUnreal's [v469e release](https://github.com/OldUnreal/UnrealTournamentPatches/releases/tag/v469e) recommends v469e for online play and states that it automatically connects to community master servers. The launch/distribution implications are tracked in `docs/DISTRIBUTION_AND_ONBOARDING.md`.
+
 The native host now exposes a compact dark direct-connect sheet in the three-dot menu. It reports current path availability, accepts a bare hostname or `unreal://host:port` URL, rejects non-Unreal schemes, remembers the last valid address, and passes the normalized URL to the original v469e engine entry. When an engine session is already active, it routes the player to Unreal Tournament's original Multiplayer menu rather than attempting a duplicate start.
 
 The current-source iPad flow was exercised end to end with a public unmodified endpoint: invalid `https://` input was rejected, `ut99.weba.ru:7777` was normalized, DNS resolved, the server returned `CHALLENGE VER=469`, download managers and `WELCOME LEVEL=DM-CMetal`, and the original engine loaded the remote map. Evidence and exact remaining G8 limits are in `docs/evidence/network/2026-08-24-native-direct-connect-ui/RESULT.md`.

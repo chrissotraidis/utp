@@ -60,7 +60,7 @@ The product is successful when an iPad or iPhone can:
 2. **Same game, not a remake.** Preserve UT packages, physics, AI, rendering behavior, game rules, demos, and network protocol as closely as the v469e engine permits.
 3. **469-class compatibility.** The target is modern UT99 compatibility and online interoperability, not merely an isolated v400 mobile build.
 4. **Native Apple integration.** ARM64, Metal, UIKit, Game Controller, Files integration, correct lifecycle handling, and Apple-platform diagnostics.
-5. **User-supplied data.** Do not commit or silently redistribute Epic game data or OldUnreal binaries.
+5. **Authorized data with explicit consent.** Do not commit or silently redistribute Epic game data or OldUnreal binaries. An approved source download may be offered only with clear provenance, terms, consent, digest verification, and permission for this use.
 6. **Reproducibility.** A new developer must be able to run a documented bootstrap command and reproduce the build from pinned inputs.
 7. **Evidence over optimism.** Every promotion gate requires logs, screenshots, test output, and device details.
 8. **No accidental engine project.** If the selected foundation fails, stop. Do not begin finishing SurrealEngine or reconstructing UE1 unless the project owner explicitly authorizes that separate undertaking.
@@ -78,6 +78,7 @@ The product is successful when an iPad or iPhone can:
 - Support physical controllers, keyboard, and mouse.
 - Support sound effects, music, voice/announcer audio, and correct audio interruption behavior.
 - Import and validate game data from common GOTY distributions, including Steam-origin data when available to the user.
+- Provide a first-run **Get Game Data** path from an explicitly authorized source, if distribution permission is confirmed, while retaining folder/ZIP import.
 - Preserve online compatibility with current community master servers and direct-address v469 servers.
 - Provide an excellent three-dot host menu for controls, data management, diagnostics, logs, and recovery.
 - Produce complete build, architecture, testing, provenance, and troubleshooting documentation.
@@ -91,12 +92,13 @@ The product is successful when an iPad or iPhone can:
 - Data-only community maps, skins, mutators, and UnrealScript packages.
 - A canonical data-export utility for macOS.
 - A reproducible locally signed IPA packaging flow.
+- A documented TestFlight-first beta and permission-gated public distribution plan.
 
 ### 3.3 Explicit non-goals for the initial release
 
 - Unreal Tournament 2004.
 - UnrealEd on iOS/iPadOS.
-- App Store approval or public commercial distribution.
+- App Store approval or public commercial distribution before engine/data permissions, physical gates, and Apple review requirements are satisfied.
 - Bundling Epic’s original game content in the source repository.
 - Bundling a modified OldUnreal engine binary in public releases without clear permission.
 - Supporting arbitrary downloaded native C++ mods or desktop `.dll`/`.dylib` modules.
@@ -608,6 +610,14 @@ The importer must:
 ### 12.4 Steam compatibility requirement
 
 The project must specifically test at least one Steam-origin GOTY installation or canonical pack made from it. It does not need to prove that every byte in Steam equals the GOTY ISO. It must prove that the content packages required by the v469e engine are accepted and behave correctly. Record differences in `docs/DATA_COMPATIBILITY.md`.
+
+### 12.5 Authorized first-run download
+
+OldUnreal currently publishes full-game installers that download the original UT99 GOTY disc image and apply the latest patch. If OldUnreal/Epic confirms that this project may automate the same acquisition for iOS, first launch should add **Get Game Data** beside the existing import choices.
+
+Before downloading, the app must show source, approximate size, terms/provenance, storage destination, and an explicit consent action. It must fetch only from an approved source, verify a pinned digest, extract only required data packages, reject executable/native code, reuse the transactional importer, and remove temporary source media after success unless the user elects to retain it. A website may explain and deep-link into this flow, but must not silently install data or imply that permission to download equals permission for this project to mirror or rebundle it.
+
+Public implementation remains gated on written permission and the selected Apple distribution channel. See `docs/DISTRIBUTION_AND_ONBOARDING.md`.
 
 ---
 
@@ -1236,6 +1246,7 @@ Every major gate gets a dated evidence folder with:
 - **FR-012:** The app shall support a canonical pack produced from Steam-origin content.
 - **FR-013:** The app shall not require original desktop executables at runtime.
 - **FR-014:** The app shall expose verify, repair/reimport, and manifest export.
+- **FR-015:** When an authorized source is approved, the app shall offer consent-based game-data acquisition with pinned integrity verification and no executable-code import.
 
 ### Input/UI
 
@@ -1257,6 +1268,7 @@ Every major gate gets a dated evidence folder with:
 - **FR-041:** The client shall join an unmodified compatible server.
 - **FR-042:** Direct connect shall work.
 - **FR-043:** Core multiplayer replication shall remain correct through a match.
+- **FR-044:** Online play shall be a launch-critical capability, with current community master-server defaults and tested-server compatibility documented.
 
 ### Diagnostics
 
@@ -1350,6 +1362,8 @@ The project is complete only when:
 16. `docs/` reflects the final implementation rather than the original plan.
 17. README is current, screenshot-backed, and at least as useful as EctoPad’s reference README.
 18. No extra simulator or stale game instance remains running after tests.
+19. Public release copy may advertise online play only after physical server-browser play and another-player/observer validation pass.
+20. Any prebuilt distribution and first-run game-data download have documented owner permission and an Apple-supported delivery channel.
 
 ---
 
@@ -1389,7 +1403,9 @@ The stop report must identify the last passed gate, exact errors, binaries and h
 13. What exact Steam/GOG/ISO package differences affect the importer?
 14. Does community master-server traffic require any TLS/HTTP behavior that the iOS process lacks?
 15. Which public servers reject the client because of legacy anti-cheat rather than protocol incompatibility?
-16. Can the preferred final IPA be distributed as a prebuilt artifact under applicable permissions, or must users locally build it?
+16. Can the preferred final IPA be distributed as a prebuilt artifact under applicable permissions, or must users locally build it? Current answer: unresolved; Simulator/package success is not distribution permission.
+17. May UT99Apple directly acquire the GOTY image/data from OldUnreal's authorized installer endpoints, or must it hand off to the existing installer/manual import flow?
+18. Is TestFlight/App Store viable for the transformed engine, or is Apple-approved regional website distribution/local signing required?
 
 Each answer belongs in `docs/DECISIONS.md` or the relevant specialized document with evidence.
 
@@ -1456,6 +1472,10 @@ The agent should pin or archive the exact versions it uses. Core sources informi
     https://github.com/dpjudas/SurrealEngine
 15. UT99 Android mobile precedent and data-import/controller behavior:  
     https://github.com/Andiweli/UT99-Android
+16. Apple beta and release distribution:
+    https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases
+17. Apple website distribution requirements:
+    https://developer.apple.com/documentation/appdistribution/distributing-your-app-from-your-website
 
 ---
 
