@@ -7,7 +7,7 @@
 **Internal working name:** `UT99Apple`  
 **Primary product:** Native Unreal Tournament (1999) client for iOS and iPadOS  
 **Reference desktop build:** OldUnreal Unreal Tournament v469e for macOS  
-**UI reference:** EctoPad under `ref/ectopad` (source mirror `/Users/chrissotraidis/GitHub/ectopad`)
+**UI reference:** EctoPad in an ignored local checkout under `ref/ectopad`
 
 ---
 

@@ -4,7 +4,7 @@ EctoPad is the active visual and interaction baseline for UT99Apple's iPhone and
 
 ## Pinned source
 
-- Repository: `/Users/chrissotraidis/GitHub/ectopad`
+- Repository: ignored local checkout under `ref/ectopad`
 - Commit: `461de17f549d98742bc3b2d031156f79ab3eaa9d`
 - Primary implementation: `ref/sunpad/apple/ios/SunPadGameOverlay.mm`
 - Primary screenshot: `assets/screenshots/ectopad-chozo-ruins.jpg` (1200×899)

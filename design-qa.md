@@ -4,9 +4,9 @@ final result: passed
 
 ## Visual truth and implementation
 
-- Source image: `/Users/chrissotraidis/GitHub/utp/ref/ectopad/assets/screenshots/ectopad-chozo-ruins.jpg`
-- Source implementation: `/Users/chrissotraidis/GitHub/utp/ref/ectopad/ref/sunpad/apple/ios/SunPadGameOverlay.mm` at `461de17f549d98742bc3b2d031156f79ab3eaa9d`
-- User-rejected settings capture: `/var/folders/px/95pn2y3n77xb97y8k2fpmd2m0000gp/T/TemporaryItems/NSIRD_screencaptureui_eaPBA0/Screenshot 2026-08-24 at 2.19.15 PM.png`
+- Source image: ignored reference asset `ref/ectopad/assets/screenshots/ectopad-chozo-ruins.jpg`
+- Source implementation: ignored reference source `ref/ectopad/ref/sunpad/apple/ios/SunPadGameOverlay.mm` at `461de17f549d98742bc3b2d031156f79ab3eaa9d`
+- User-rejected settings capture: local-only comparison capture (not published)
 - Final iPad gameplay: `docs/evidence/engine-startup/2026-08-24-ios-player-facing-controls-fix/09-final-current-gameplay-landscape.png`
 - Final iPhone gameplay: `docs/evidence/engine-startup/2026-08-24-ios-ectopad-menu-redesign/11-iphone-controls-standard.jpeg`
 - Final iPad host menu: `docs/evidence/engine-startup/2026-08-24-ios-ectopad-menu-redesign/09-ipad-native-menu-dark.jpeg`

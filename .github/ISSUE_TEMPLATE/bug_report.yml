@@ -1,0 +1,98 @@
+name: Bug report
+description: Report a reproducible UT99Apple problem without sharing proprietary data or credentials.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing UT99Apple. Never attach game data, a generated engine image, an app/IPA, signing files, credentials, or unredacted diagnostics.
+
+  - type: input
+    id: commit
+    attributes:
+      label: UT99Apple commit
+      description: Run `git rev-parse --short HEAD` or provide the source tag.
+      placeholder: abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Physical iPad
+        - Physical iPhone
+        - iPad Simulator
+        - iPhone Simulator
+        - macOS baseline or hosted harness
+        - Build, audit, packaging, or repository tooling
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device, OS, and Xcode
+      placeholder: iPad model, iPadOS version, Xcode version
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: Build or installation method
+      placeholder: make ios-engine-sim-package, make device-run, local Xcode build
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Failure stage
+      options:
+        - Bootstrap or dependency preparation
+        - Build or link
+        - Signing, installation, or launch
+        - First-run game-data setup
+        - Engine startup or rendering
+        - Touch, controller, keyboard, or mouse input
+        - Audio or lifecycle
+        - Offline gameplay
+        - Online browser, join, or gameplay
+        - Diagnostics or packaging
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact command, menu, input method, and lifecycle state.
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Observed and expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized diagnostics or screenshots
+      description: Remove personal paths, account details, server credentials, signing data, and proprietary game/runtime content.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: I searched existing issues and checked the current status and known-issues documents.
+          required: true
+        - label: I reproduced this on the latest available source when practical.
+          required: true
+        - label: I have not attached or linked to proprietary game/runtime data, signing material, credentials, or private personal information.
+          required: true
