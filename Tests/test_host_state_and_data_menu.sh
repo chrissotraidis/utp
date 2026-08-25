@@ -27,6 +27,20 @@ rg -q 'Export Installed Manifest' Sources/UT99Host/GameViewController.swift
 rg -q 'recoverInterruptedCommit' Sources/UT99Host/GameViewController.swift
 rg -q 'com.ut99apple.data-import' Sources/UT99Host/GameViewController.swift
 rg -q 'Cancel game data import' Sources/UT99Host/GameViewController.swift
+rg -Fq 'GET GAME DATA' Sources/UT99Host/GameViewController.swift
+rg -Fq 'PLAY OFFLINE' Sources/UT99Host/GameViewController.swift
+rg -Fq 'PLAY ONLINE' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Accept Terms & Download' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Get Verified Game Data…' Sources/UT99Host/GameViewController.swift
+rg -Fq -- '-UT99OnboardingSmokeTest' Sources/UT99Host/GameViewController.swift
+rg -Fq 'gameDataDownload?.cancel()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'self?.startEngine()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'self?.showMultiplayerInfo()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let shouldHide = !engineActive' Sources/UT99Host/GameViewController.swift
+if rg -Fq 'let resume = action("Resume Game", symbol: "play.fill") { }' Sources/UT99Host/GameViewController.swift; then
+    echo "Inactive host menu still contains the old no-op Resume action" >&2
+    exit 1
+fi
 rg -q 'phase: \.installing' Sources/UT99Host/UT99DataImporter.swift
 rg -q -- '-UT99TouchEditorSmokeTest' Sources/UT99Host/GameViewController.swift
 rg -q -- '-UT99TouchDefaultSmokeTest' Sources/UT99Host/GameViewController.swift

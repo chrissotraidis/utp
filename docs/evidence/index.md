@@ -40,3 +40,4 @@
 - [iOS interrupted-session recovery and safe mode — 2026-08-24](engine-startup/2026-08-24-ios-crash-recovery-pass/RESULT.md)
 - [iOS native 4:3 viewport pass — 2026-08-24](engine-startup/2026-08-24-ios-native-viewport-pass/RESULT.md)
 - [iPhone lifecycle and performance soak — 2026-08-25](stability/2026-08-25-ios-phone-lifecycle-performance/RESULT.md)
+- [First-run game-data acquisition — 2026-08-25](onboarding/2026-08-25-first-run-acquisition/RESULT.md)

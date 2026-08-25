@@ -136,6 +136,7 @@ test:
 	@./Tests/test_openal_ios_patch.sh
 	@./Tests/test_metal_performance_metrics.sh
 	@./Tests/test_data_import_transaction.sh
+	@./Tests/test_game_data_acquisition.sh
 	@./Tests/test_runtime_recovery.sh
 	@./Tests/test_diagnostics_archive.sh
 	@./Tests/test_host_state_and_data_menu.sh

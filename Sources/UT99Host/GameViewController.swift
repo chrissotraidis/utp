@@ -6,6 +6,7 @@ import GameController
 import AVFAudio
 import Network
 import Darwin
+import SafariServices
 
 /// Accessibility activation must remain synchronous because the original SDL
 /// main loop owns the application's main thread after engine entry.  A normal
@@ -123,6 +124,15 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     private weak var importProgressView: UIProgressView?
     private weak var importSpinner: UIActivityIndicatorView?
     private weak var importCancelButton: UIButton?
+    private var gameDataDownload: UT99GameDataDownload?
+    private var gameDataDownloadProgressTimer: Timer?
+    private var gameDataAcquisitionWorkspace: URL?
+    private var onboardingPanel: UIVisualEffectView?
+    private weak var onboardingTitleLabel: UILabel?
+    private weak var onboardingDetailLabel: UILabel?
+    private weak var onboardingPrimaryButton: UIButton?
+    private weak var onboardingSecondaryButton: UIButton?
+    private weak var onboardingTertiaryButton: UIButton?
     private var isReassertingSDLWindow = false
     private var hasAutoStartedFromArguments = false
     private var hasPresentedMenuSmokeState = false
@@ -387,6 +397,13 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
             menuButton.heightAnchor.constraint(equalToConstant: 40)
         ])
 
+        configureOnboardingPanel()
+        if recoveredSession == nil {
+            reconcileGameDataState(reason: "initial data readiness check")
+        } else {
+            updateOnboardingPanel()
+        }
+
         let g2SmokeRequested = CommandLine.arguments.contains("-UT99G2SmokeTest")
         if g2SmokeRequested || CommandLine.arguments.contains("-UT99ImportTransactionSmokeTest") {
             runDataImportTransactionSmokeTest()
@@ -504,6 +521,8 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         guard hostState != next else { return }
         NSLog("UT99 host state %@ -> %@ reason=%@", hostState.rawValue, next.rawValue, reason)
         hostState = next
+        refreshHostMenu()
+        updateOnboardingPanel()
     }
 
     private func appIdentity() -> (version: String, build: String) {
@@ -673,7 +692,8 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         let controllerConnected = GCController.controllers().contains {
             $0.isAttachedToDevice && $0.extendedGamepad != nil
         }
-        let shouldHide = controllerConnected && UT99TouchConfiguration.load().autoHideForController
+        let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
+        let shouldHide = !engineActive || (controllerConnected && UT99TouchConfiguration.load().autoHideForController)
         if shouldHide {
             releaseGameplayInputs()
         }
@@ -761,6 +781,322 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
+    private func configureOnboardingPanel() {
+        let panel = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
+        panel.translatesAutoresizingMaskIntoConstraints = false
+        panel.layer.cornerRadius = 24
+        panel.layer.cornerCurve = .continuous
+        panel.layer.borderWidth = 1
+        panel.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
+        panel.clipsToBounds = true
+
+        let eyebrow = UILabel()
+        eyebrow.text = "UT99 · NATIVE APPLE CLIENT"
+        eyebrow.textColor = UIColor(red: 0.35, green: 0.92, blue: 0.88, alpha: 1)
+        eyebrow.font = .monospacedSystemFont(ofSize: 11, weight: .bold)
+
+        let title = UILabel()
+        title.textColor = .white
+        title.font = .systemFont(ofSize: 25, weight: .bold)
+        title.numberOfLines = 1
+
+        let detail = UILabel()
+        detail.textColor = UIColor(white: 0.78, alpha: 1)
+        detail.font = .systemFont(ofSize: 14, weight: .regular)
+        detail.numberOfLines = 0
+
+        let primary = onboardingButton(primary: true)
+        primary.addTarget(self, action: #selector(onboardingPrimaryTapped), for: .touchUpInside)
+        let secondary = onboardingButton(primary: false)
+        secondary.addTarget(self, action: #selector(onboardingSecondaryTapped), for: .touchUpInside)
+        let buttons = UIStackView(arrangedSubviews: [primary, secondary])
+        buttons.axis = .horizontal
+        buttons.spacing = 12
+        buttons.distribution = .fillEqually
+
+        let tertiary = UIButton(type: .system)
+        tertiary.setTitleColor(UIColor(white: 0.82, alpha: 1), for: .normal)
+        tertiary.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
+        tertiary.contentHorizontalAlignment = .leading
+        tertiary.addTarget(self, action: #selector(onboardingTertiaryTapped), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [eyebrow, title, detail, buttons, tertiary])
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.setCustomSpacing(5, after: eyebrow)
+        stack.setCustomSpacing(18, after: detail)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView.addSubview(stack)
+        view.addSubview(panel)
+
+        let preferredWidth = panel.widthAnchor.constraint(equalToConstant: 620)
+        preferredWidth.priority = .defaultHigh
+        NSLayoutConstraint.activate([
+            panel.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            panel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor, constant: 22),
+            preferredWidth,
+            panel.widthAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.widthAnchor, constant: -48),
+            stack.leadingAnchor.constraint(equalTo: panel.contentView.leadingAnchor, constant: 26),
+            stack.trailingAnchor.constraint(equalTo: panel.contentView.trailingAnchor, constant: -26),
+            stack.topAnchor.constraint(equalTo: panel.contentView.topAnchor, constant: 22),
+            stack.bottomAnchor.constraint(equalTo: panel.contentView.bottomAnchor, constant: -20),
+            primary.heightAnchor.constraint(equalToConstant: 48),
+            secondary.heightAnchor.constraint(equalToConstant: 48),
+            tertiary.heightAnchor.constraint(greaterThanOrEqualToConstant: 30),
+        ])
+
+        panel.accessibilityIdentifier = "ut99.onboarding.panel"
+        primary.accessibilityIdentifier = "ut99.onboarding.primary"
+        secondary.accessibilityIdentifier = "ut99.onboarding.secondary"
+        tertiary.accessibilityIdentifier = "ut99.onboarding.tertiary"
+        onboardingPanel = panel
+        onboardingTitleLabel = title
+        onboardingDetailLabel = detail
+        onboardingPrimaryButton = primary
+        onboardingSecondaryButton = secondary
+        onboardingTertiaryButton = tertiary
+    }
+
+    private func onboardingButton(primary: Bool) -> UIButton {
+        let button = UIButton(type: .system)
+        var configuration = primary ? UIButton.Configuration.filled() : UIButton.Configuration.tinted()
+        configuration.cornerStyle = .capsule
+        configuration.baseBackgroundColor = primary
+            ? UIColor(red: 0.04, green: 0.58, blue: 0.69, alpha: 1)
+            : UIColor(white: 0.24, alpha: 1)
+        configuration.baseForegroundColor = .white
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 14, weight: .bold)
+            return outgoing
+        }
+        button.configuration = configuration
+        return button
+    }
+
+    private func isGameDataReady() -> Bool {
+        if CommandLine.arguments.contains("-UT99OnboardingSmokeTest") {
+            return false
+        }
+        if let bundledData = Bundle.main.url(forResource: "UT99Data", withExtension: nil),
+           FileManager.default.fileExists(atPath: bundledData.appendingPathComponent("Maps").path) {
+            return true
+        }
+        let root = dataSupportRoot()
+        let manifestURL = UT99DataImportTransaction.installedManifestURL(at: root)
+        guard let manifestData = try? Data(contentsOf: manifestURL),
+              let object = try? JSONSerialization.jsonObject(with: manifestData),
+              let dictionary = object as? [String: Any],
+              let files = dictionary["files"] as? [[String: Any]],
+              !files.isEmpty else {
+            return false
+        }
+        return UT99DataImportTransaction.contentDirectoryNames.allSatisfy { name in
+            var isDirectory: ObjCBool = false
+            return FileManager.default.fileExists(
+                atPath: root.appendingPathComponent(name, isDirectory: true).path,
+                isDirectory: &isDirectory
+            ) && isDirectory.boolValue
+        }
+    }
+
+    private func reconcileGameDataState(reason: String) {
+        guard hostState != .running, hostState != .startingEngine, hostState != .pausedBySystem,
+              hostState != .crashed, hostState != .safeMode else {
+            updateOnboardingPanel()
+            return
+        }
+        transition(to: isGameDataReady() ? .ready : .needsData, reason: reason)
+        updateOnboardingPanel()
+    }
+
+    private func updateOnboardingPanel() {
+        guard let panel = onboardingPanel else { return }
+        let landingState = hostState == .ready || hostState == .needsData
+        panel.isHidden = !landingState
+        if landingState {
+            touchOverlay.isHidden = true
+            gameSurfaceInputView.isUserInteractionEnabled = false
+            view.bringSubviewToFront(panel)
+            view.bringSubviewToFront(menuButton)
+        }
+        guard landingState else { return }
+
+        if hostState == .ready {
+            statusLabel.text = "Game data verified · offline and online play ready"
+            onboardingTitleLabel?.text = "Ready for the Tournament"
+            onboardingDetailLabel?.text = "Original v469e gameplay, offline bots, and community multiplayer are ready."
+            onboardingPrimaryButton?.setTitle("PLAY OFFLINE", for: .normal)
+            onboardingSecondaryButton?.setTitle("PLAY ONLINE", for: .normal)
+            onboardingTertiaryButton?.setTitle("Verify or replace game data", for: .normal)
+            onboardingPrimaryButton?.accessibilityHint = "Starts the original Unreal Tournament menu and offline game"
+            onboardingSecondaryButton?.accessibilityHint = "Opens direct connect and the original community server browser"
+        } else {
+            statusLabel.text = "Game data required · download or import to continue"
+            onboardingTitleLabel?.text = "Finish game setup"
+            onboardingDetailLabel?.text = "UT99Apple needs the original GOTY maps, music, sounds, and textures. Download the verified OldUnreal release or import files you already have."
+            onboardingPrimaryButton?.setTitle("GET GAME DATA", for: .normal)
+            onboardingSecondaryButton?.setTitle("IMPORT FILES", for: .normal)
+            onboardingTertiaryButton?.setTitle("Why game data is separate", for: .normal)
+            onboardingPrimaryButton?.accessibilityHint = "Explains the approved source and asks before downloading"
+            onboardingSecondaryButton?.accessibilityHint = "Selects an existing Unreal Tournament folder or ZIP from Files"
+        }
+    }
+
+    @objc private func onboardingPrimaryTapped() {
+        if hostState == .ready {
+            startEngine()
+        } else {
+            showAuthorizedGameDataOptions()
+        }
+    }
+
+    @objc private func onboardingSecondaryTapped() {
+        if hostState == .ready {
+            showMultiplayerInfo()
+        } else {
+            importData()
+        }
+    }
+
+    @objc private func onboardingTertiaryTapped() {
+        if hostState == .ready {
+            showDataInfo()
+        } else {
+            showAuthorizedGameDataOptions()
+        }
+    }
+
+    private func showAuthorizedGameDataOptions() {
+        guard hostState != .running && hostState != .startingEngine && hostState != .pausedBySystem else { return }
+        let message = "OldUnreal's approved installer sources publish the original Unreal Tournament GOTY disc image. The download is 620 MiB and temporary setup may use about 2 GB. UT99Apple verifies the exact SHA-256, extracts only maps/music/sounds/textures, and deletes the image after installation. The Epic Games Terms of Service apply."
+        let alert = UIAlertController(title: "Get Game Data", message: message, preferredStyle: .actionSheet)
+        alert.overrideUserInterfaceStyle = .dark
+        alert.addAction(UIAlertAction(title: "Accept Terms & Download", style: .default) { [weak self] _ in
+            self?.startAuthorizedGameDataDownload()
+        })
+        alert.addAction(UIAlertAction(title: "Read Epic Games Terms", style: .default) { [weak self] _ in
+            self?.presentWebPage(UT99AuthorizedGameData.termsURL)
+        })
+        alert.addAction(UIAlertAction(title: "View OldUnreal Source", style: .default) { [weak self] _ in
+            self?.presentWebPage(UT99AuthorizedGameData.sourcePageURL)
+        })
+        alert.addAction(UIAlertAction(title: "Import Existing Files", style: .default) { [weak self] _ in
+            self?.importData()
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = onboardingPrimaryButton ?? menuButton
+            popover.sourceRect = (onboardingPrimaryButton ?? menuButton).bounds
+        }
+        present(alert, animated: true)
+    }
+
+    private func presentWebPage(_ url: URL) {
+        present(SFSafariViewController(url: url), animated: true)
+    }
+
+    private func startAuthorizedGameDataDownload() {
+        guard activeImportCancellation == nil, gameDataDownload == nil else {
+            statusLabel.text = "Game-data setup is already in progress"
+            return
+        }
+        let workspace = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("UT99AuthorizedData-\(UUID().uuidString)", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        } catch {
+            statusLabel.text = "Cannot prepare download storage: \(error.localizedDescription)"
+            return
+        }
+
+        let cancellation = UT99ImportCancellation()
+        let download = UT99GameDataDownload()
+        activeImportCancellation = cancellation
+        gameDataDownload = download
+        gameDataAcquisitionWorkspace = workspace
+        transition(to: .validatingData, reason: "authorized OldUnreal download accepted")
+        presentImportProgress()
+        importPhaseLabel?.text = "Downloading verified GOTY data…"
+        importFileLabel?.text = "Connecting to \(download.currentSourceHost) · 620 MiB"
+        importProgressView?.isHidden = false
+        importProgressView?.progress = 0
+        importSpinner?.stopAnimating()
+        statusLabel.text = "Downloading game data from OldUnreal"
+
+        gameDataDownloadProgressTimer?.invalidate()
+        gameDataDownloadProgressTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            self?.refreshGameDataDownloadProgress()
+        }
+        download.start(destinationDirectory: workspace) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.gameDataDownloadProgressTimer?.invalidate()
+                self?.gameDataDownloadProgressTimer = nil
+                self?.gameDataDownload = nil
+                switch result {
+                case let .success(imageURL):
+                    self?.extractAndInstallAuthorizedGameData(imageURL, workspace: workspace, cancellation: cancellation)
+                case let .failure(error):
+                    self?.finishDataImport(.failure(error), returnState: .needsData, cancellation: cancellation)
+                }
+            }
+        }
+    }
+
+    private func refreshGameDataDownloadProgress() {
+        guard let download = gameDataDownload else { return }
+        let progress = download.progress
+        let received = progress?.completedUnitCount ?? 0
+        let total = progress?.totalUnitCount ?? UT99AuthorizedGameData.expectedISOBytes
+        let fraction = total > 0 ? Float(received) / Float(total) : 0
+        importProgressView?.setProgress(max(0, min(1, fraction)), animated: true)
+        importPhaseLabel?.text = "Downloading \(Int(fraction * 100))%"
+        importFileLabel?.text = "\(download.currentSourceHost) · \(received / 1_048_576) of \(UT99AuthorizedGameData.expectedISOBytes / 1_048_576) MiB"
+    }
+
+    private func extractAndInstallAuthorizedGameData(
+        _ imageURL: URL,
+        workspace: URL,
+        cancellation: UT99ImportCancellation
+    ) {
+        importPhaseLabel?.text = "Verifying and extracting data…"
+        importFileLabel?.text = "The signed source image matched its SHA-256"
+        importProgressView?.progress = 0
+        importQueue.async { [weak self] in
+            guard let self else { return }
+            let extracted = workspace.appendingPathComponent("Extracted", isDirectory: true)
+            let result: Result<Int, Swift.Error>
+            do {
+                _ = try UT99ISO9660Extractor.extractDataDirectories(
+                    from: imageURL,
+                    to: extracted,
+                    cancellationRequested: { cancellation.isCancelled },
+                    progress: { update in
+                        DispatchQueue.main.async { [weak self] in
+                            self?.importPhaseLabel?.text = "Extracting \(update.completedFiles) of \(update.totalFiles)"
+                            self?.importFileLabel?.text = update.currentFile
+                            self?.importProgressView?.setProgress(update.fractionCompleted, animated: true)
+                        }
+                    }
+                )
+                try? FileManager.default.removeItem(at: imageURL)
+                let imported = try UT99DataImporter.importFolder(
+                    extracted,
+                    to: self.dataSupportRoot(),
+                    cancellation: cancellation
+                ) { update in
+                    DispatchQueue.main.async { [weak self] in self?.applyImportProgress(update) }
+                }
+                result = .success(imported)
+            } catch {
+                result = .failure(error)
+            }
+            DispatchQueue.main.async { [weak self] in
+                self?.finishDataImport(result, returnState: .needsData, cancellation: cancellation)
+            }
+        }
+    }
+
     private func buildHostMenu() -> UIMenu {
         func action(
             _ title: String,
@@ -781,8 +1117,24 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
             }
         }
 
-        let resume = action("Resume Game", symbol: "play.fill") { }
-        let unrealMenu = action("Unreal Tournament Menu", symbol: "pause.rectangle") { [weak self] in
+        let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
+        let primaryAction: UIAction
+        if engineActive {
+            primaryAction = action("Resume Game", symbol: "play.fill") { }
+        } else if isGameDataReady() {
+            primaryAction = action("Play Offline", symbol: "play.fill") { [weak self] in
+                self?.startEngine()
+            }
+        } else {
+            primaryAction = action("Set Up Game Data", symbol: "arrow.down.circle") { [weak self] in
+                self?.showAuthorizedGameDataOptions()
+            }
+        }
+        let unrealMenu = action(
+            "Unreal Tournament Menu",
+            symbol: "pause.rectangle",
+            attributes: engineActive ? [] : [.disabled]
+        ) { [weak self] in
             self?.engineBridge.publishTouchAction(.pause, pressed: true)
             self?.engineBridge.publishTouchAction(.pause, pressed: false)
         }
@@ -821,6 +1173,9 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         ])
 
         let dataMenu = UIMenu(title: "Game Data & Saves", image: UIImage(systemName: "externaldrive"), children: [
+            action("Get Verified Game Data…", symbol: "arrow.down.circle") { [weak self] in
+                self?.showAuthorizedGameDataOptions()
+            },
             action("Import or Reimport Game Data…", symbol: "folder") { [weak self] in
                 self?.importData()
             },
@@ -848,7 +1203,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         ])
 
         return UIMenu(title: "UT99Apple", children: [
-            resume,
+            primaryAction,
             unrealMenu,
             touchMenu,
             systemMenu,
@@ -1241,6 +1596,12 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     }
 
     @objc private func showMultiplayerInfo() {
+        guard isGameDataReady() else {
+            transition(to: .needsData, reason: "multiplayer requested before game-data setup")
+            statusLabel.text = "Set up game data before playing online"
+            showAuthorizedGameDataOptions()
+            return
+        }
         let network = networkMonitor.currentPath.status == .satisfied ? "Online" : "Network unavailable"
         let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
         let message = engineActive
@@ -1687,6 +2048,11 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     }
 
     private func connectToServer(_ rawValue: String) {
+        guard isGameDataReady() else {
+            transition(to: .needsData, reason: "direct connect requested before game-data setup")
+            statusLabel.text = "Set up game data before joining a server"
+            return
+        }
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let candidate = trimmed.contains("://") ? trimmed : "unreal://" + trimmed
         guard !trimmed.isEmpty,
@@ -1885,6 +2251,12 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     }
 
     @objc private func startEngine() {
+        guard isGameDataReady() else {
+            transition(to: .needsData, reason: "offline play requested before game-data setup")
+            statusLabel.text = "Set up game data before starting Unreal Tournament"
+            UIAccessibility.post(notification: .screenChanged, argument: onboardingTitleLabel)
+            return
+        }
         _ = launchEngine()
     }
 
@@ -1981,6 +2353,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
         hostWindow.makeKeyAndVisible()
         view.bringSubviewToFront(touchOverlay)
         view.bringSubviewToFront(menuButton)
+        reconcileGameDataState(reason: "engine session returned to host")
         NSLog("UT99 restored diagnosable host surface after engine return")
     }
 
@@ -2340,6 +2713,7 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
 
     @objc private func cancelDataImport() {
         guard let activeImportCancellation, !activeImportCancellation.isCancelled else { return }
+        gameDataDownload?.cancel()
         guard activeImportCancellation.cancel() else {
             importCancelButton?.isEnabled = false
             importPhaseLabel?.text = "Installing verified data…"
@@ -2359,6 +2733,13 @@ final class GameViewController: UIViewController, MTKViewDelegate, UIDocumentPic
     ) {
         guard activeImportCancellation === cancellation else { return }
         activeImportCancellation = nil
+        gameDataDownloadProgressTimer?.invalidate()
+        gameDataDownloadProgressTimer = nil
+        gameDataDownload = nil
+        if let workspace = gameDataAcquisitionWorkspace {
+            try? FileManager.default.removeItem(at: workspace)
+            gameDataAcquisitionWorkspace = nil
+        }
         importProgressPanel?.removeFromSuperview()
         importProgressPanel = nil
         touchOverlay.isUserInteractionEnabled = true

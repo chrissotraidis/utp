@@ -194,7 +194,8 @@ enum UT99DataImporter {
                 try checkCancellation(cancellation)
                 let values = try item.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
                 guard values.isRegularFile == true, values.isSymbolicLink != true else { continue }
-                try validateContentFile(item)
+                if shouldSkipContentFile(named: item.lastPathComponent) { continue }
+                try validateContentFileName(item.lastPathComponent)
                 let prefix = directory.standardizedFileURL.path + "/"
                 let itemPath = item.standardizedFileURL.path
                 guard itemPath.hasPrefix(prefix) else { continue }
@@ -205,12 +206,14 @@ enum UT99DataImporter {
         return files.sorted { $0.relativePath.localizedStandardCompare($1.relativePath) == .orderedAscending }
     }
 
-    private static func validateContentFile(_ item: URL) throws {
-        let lowerName = item.lastPathComponent.lowercased()
-        let lowerExtension = item.pathExtension.lowercased()
-        if ["exe", "dll", "dylib", "app", "iso", "bin"].contains(lowerExtension) ||
-            ["ladderfonts.utx", "uwindowfonts.utx"].contains(lowerName) {
-            throw Error.unsupportedFile(item.lastPathComponent)
+    static func shouldSkipContentFile(named name: String) -> Bool {
+        ["ladderfonts.utx", "uwindowfonts.utx"].contains(name.lowercased())
+    }
+
+    static func validateContentFileName(_ name: String) throws {
+        let lowerExtension = URL(fileURLWithPath: name).pathExtension.lowercased()
+        if ["exe", "dll", "dylib", "app", "iso", "bin"].contains(lowerExtension) {
+            throw Error.unsupportedFile(name)
         }
     }
 

@@ -613,9 +613,9 @@ The project must specifically test at least one Steam-origin GOTY installation o
 
 ### 12.5 Authorized first-run download
 
-OldUnreal currently publishes full-game installers that download the original UT99 GOTY disc image and apply the latest patch. If OldUnreal/Epic confirms that this project may automate the same acquisition for iOS, first launch should add **Get Game Data** beside the existing import choices.
+OldUnreal currently publishes full-game installers that download the original UT99 GOTY disc image and apply the latest patch. The candidate now implements **Get Game Data** beside **Import Files** using the same pinned source contract; enabling that path in a publicly distributed binary still requires OldUnreal/Epic permission and Apple-channel clearance.
 
-Before downloading, the app must show source, approximate size, terms/provenance, storage destination, and an explicit consent action. It must fetch only from an approved source, verify a pinned digest, extract only required data packages, reject executable/native code, reuse the transactional importer, and remove temporary source media after success unless the user elects to retain it. A website may explain and deep-link into this flow, but must not silently install data or imply that permission to download equals permission for this project to mirror or rebundle it.
+Before downloading, the app must show source, approximate size, terms/provenance, storage destination, and an explicit consent action. The candidate does this, fetches only from the pinned OldUnreal installer mirrors/Archive fallback, verifies exact size and digest, extracts only required data packages, rejects executable/native code, reuses the transactional importer, and removes temporary source media after completion or cancellation. A website may explain and deep-link into this flow, but must not silently install data or imply that permission to download equals permission for this project to mirror or rebundle it.
 
 Public implementation remains gated on written permission and the selected Apple distribution channel. See `docs/DISTRIBUTION_AND_ONBOARDING.md`.
 

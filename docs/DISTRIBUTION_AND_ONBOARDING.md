@@ -27,19 +27,21 @@ The release website should publish version, build hash, supported OS/device list
 
 ## First-run game-data experience
 
-The desired user flow is:
+The implemented candidate user flow is:
 
 1. Install and open UT99Apple.
 2. See a short explanation that the app and Unreal Tournament data are separate.
-3. Choose **Get Game Data** or **Import Existing Data**.
+3. Choose **Get Game Data** or **Import Files**.
 4. Before any download, show the source, approximate size, terms/provenance link, destination, and explicit consent action.
-5. Download only from an owner/maintainer-authorized endpoint, verify a pinned digest, extract only the required `Maps`, `Music`, `Sounds`, and `Textures` data, reject executable/native content, and transactionally validate before replacing a working installation.
-6. Delete temporary disc/archive material after successful import unless the user explicitly asks to retain it.
+5. Download the exact image used by OldUnreal's installers from OldUnreal mirrors (Archive.org fallback), require exactly `649633792` bytes and SHA-256 `e184984ca88f001c5ddd52035d76cd64e266e26c74975161b5ed72366c74704f`, extract only `Maps`, `Music`, `Sounds`, and `Textures`, reject executable/native content, and transactionally validate before replacing a working installation.
+6. Delete temporary disc/archive material after completion or cancellation.
 7. Enter the original menu with **Play Offline** and **Play Online** next actions.
 
 [OldUnreal's current full-game installer page](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/) states that its installers download the original UT99 GOTY disc image from OldUnreal's servers, with Archive.org as a fallback, and apply the latest patch. [OldUnreal's patch repository](https://github.com/OldUnreal/UnrealTournamentPatches) states that the project was approved by Epic Games but is not an Epic project. Those sources support an authorized-source onboarding design; they do not automatically grant this project permission to mirror the ISO, redistribute a transformed OldUnreal engine, or bypass the source's terms. Written confirmation from the relevant rights holders/maintainers is a public-release gate.
 
-The cleanest implementation is an in-app download from an explicitly approved source. A companion web page can explain the flow and deep-link into the installed app, but should not silently download hundreds of megabytes or imply that a browser can install arbitrary files directly into the app container.
+This in-app path is implemented in `UT99GameDataAcquisition.swift` and reuses the existing transactional importer. A deterministic Joliet/ISO-9660 fixture and the locally ignored official image both pass extraction tests; the official image yields 283 accepted files, and v469e decompresses its `.unr.uz` maps at first engine launch. A companion web page can explain and deep-link into the installed app, but should not silently download hundreds of megabytes or imply that a browser can install arbitrary files directly into the app container.
+
+The implementation is ready for physical acceptance, but its presence in source is not a claim that a public binary may redistribute the transformed engine or automate this acquisition in every release channel. Obtain written permission and Apple review clearance before enabling it in a public build.
 
 ## Online-play launch gate
 
@@ -80,7 +82,7 @@ Collect the first physical frame, touch-only Deck16 play, audible effects/music,
 
 - Apple Development signing and physical G2.
 - Permission to distribute the transformed OldUnreal runtime as a prebuilt app.
-- Confirmation of the exact permitted game-data download UX and source URL.
+- Written confirmation that the implemented OldUnreal mirror/fallback acquisition UX may be enabled in a public build.
 - App Store/TestFlight review feasibility and any required account/organization setup.
 - Apple-approved website-distribution eligibility if that channel is pursued.
 - Privacy, support, crash-reporting, release signing, update, and revocation operations.

@@ -13,6 +13,7 @@ Verified simulator coverage currently includes:
 - Metal/FruCoRe initialization and original engine logs.
 - EctoPad-derived UT controls for movement, look, FIRE, ALT, USE, JUMP, DUCK, PREV/NEXT, SCORE, and the original Unreal game menu.
 - Persistent touch layout editing, opacity/profile settings, host menu, data import, diagnostics, lifecycle callbacks, and controller/keyboard bridge code.
+- A real first-run setup screen with **Get Game Data** and **Import Files**. The download path shows source/size/terms before consent, retrieves the exact OldUnreal GOTY image from approved installer mirrors, verifies its pinned size and SHA-256, extracts only data packages, installs transactionally, and removes temporary media.
 - The original v469 online server browser, public-server join, data-only package downloads, movement/combat, death/respawn, map transition, and clean disconnect.
 - A final-package iPhone run held one engine process for more than 30 minutes and survived three actual Simulator Home/reopen cycles with post-resume play.
 
@@ -20,7 +21,7 @@ Physical iPad/iPhone startup, first-frame capture, touch-only play, safe-area sc
 
 See [`docs/STATUS.md`](docs/STATUS.md) for the active gate and [`docs/evidence/index.md`](docs/evidence/index.md) for the evidence ledger.
 
-The next gate is physical hardware. The build, UI, offline game, and online protocol path are in good enough local shape to stop Simulator iteration and test one signed iPhone/iPad. See [Distribution and first-run onboarding](docs/DISTRIBUTION_AND_ONBOARDING.md) for the physical handoff and eventual TestFlight/website/data-download plan.
+The next gate is physical hardware. The build, UI, first-run acquisition/import, offline game, and online protocol path are in good enough local shape to test one signed iPhone/iPad. See [Distribution and first-run onboarding](docs/DISTRIBUTION_AND_ONBOARDING.md) for the physical handoff and eventual TestFlight/website plan.
 
 ## Local prerequisites and inputs
 
@@ -92,13 +93,13 @@ The host uses the complete landscape scene for FruCoRe and overlays the EctoPad-
 
 ## Data and legal boundary
 
-The importer accepts an authorized folder or canonical data ZIP, validates content before transactional commit, writes a manifest, and rejects desktop executables/native modules. OldUnreal now publishes full-game installers that obtain the GOTY disc image from its own servers with Archive.org fallback, so a consent-based **Get Game Data** flow is a sensible product direction. This repository will not mirror that image, bundle it into the IPA, or ship a prebuilt transformed engine until the exact permissions and Apple distribution route are confirmed. UT99, Unreal Tournament, OldUnreal, SDL, FruCoRe, and EctoPad are third-party names and projects; this repository is unaffiliated unless explicitly stated by their owners.
+The app ships without Epic game data. On first launch it offers **Get Game Data** or **Import Files**. The direct path requires an explicit terms/source confirmation, downloads the exact disc image used by OldUnreal's approved installers from OldUnreal mirrors with Archive.org fallback, verifies `649633792` bytes and SHA-256 `e184984ca88f001c5ddd52035d76cd64e266e26c74975161b5ed72366c74704f`, extracts only `Maps`, `Music`, `Sounds`, and `Textures`, rejects native/executable content, commits transactionally, and deletes the temporary image. The repository does not mirror or bundle that image in the IPA. Public distribution of the transformed engine and this acquisition UX remains subject to rights-holder/maintainer permission and Apple's chosen channel. UT99, Unreal Tournament, OldUnreal, SDL, FruCoRe, and EctoPad are third-party names and projects; this repository is unaffiliated unless explicitly stated by their owners.
 
 ## Distribution direction
 
 The intended beta path is TestFlight after physical-device signing and validation. Ad Hoc IPA files work only for registered test devices; placing a raw IPA on a webpage is not universal iOS installation. Apple-approved web distribution is region- and entitlement-dependent and requires review/notarization plus server-side installation licensing.
 
-The eventual first-run experience should offer **Get Game Data** and **Import Existing Data**, show source/size/terms before download, verify a pinned digest, extract only data packages, and commit them transactionally. Details and open permission gates are in [`docs/DISTRIBUTION_AND_ONBOARDING.md`](docs/DISTRIBUTION_AND_ONBOARDING.md).
+The first-run experience now implements **Get Game Data** and **Import Files**, source/size/terms disclosure, explicit consent, pinned verification, data-only extraction, transactional install, cancellation, and cleanup. Details and remaining public-release permission gates are in [`docs/DISTRIBUTION_AND_ONBOARDING.md`](docs/DISTRIBUTION_AND_ONBOARDING.md).
 
 ## Physical hardware handoff
 
