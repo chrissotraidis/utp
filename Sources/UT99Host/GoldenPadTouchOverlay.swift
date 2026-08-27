@@ -164,6 +164,7 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
 
     var onAction: ((Action, Bool) -> Void)?
     var onMove: ((CGPoint, Bool) -> Void)?
+    var onMenuCursorNudge: ((CGPoint) -> Void)?
     var onLook: ((CGPoint, Bool) -> Void)?
 
     private let movePad = UIView()
@@ -214,6 +215,13 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
         "previousWeapon": .init(x: 0.22946287519747235, y: 0.5863247863247864, scale: 1.1761363744735718),
         "nextWeapon": .init(x: 0.28080568720379145, y: 0.5923076923076923, scale: 1.226136326789856),
         "use": .init(x: 0.2531595576619273, y: 0.7059829059829059, scale: 1.3332443237304688),
+    ]
+    /// Captured from the accepted physical iPad Pro menu layout on
+    /// 2026-08-26. Gameplay controls retain their reference geometry; only
+    /// the independently editable SELECT and BACK menu controls are seeded.
+    private static let tabletDefaultPlacements: [String: UT99TouchPlacement] = [
+        "menuBack": .init(x: 0.9300878477306003, y: 0.53955078125, scale: 1),
+        "menuSelect": .init(x: 0.8814055636896047, y: 0.63525390625, scale: 1),
     ]
     private(set) var touchProfile: TouchProfile
 
@@ -376,6 +384,10 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
             movementAccessibilityAction(name: "Move backward", value: CGPoint(x: 0, y: -1)),
             movementAccessibilityAction(name: "Strafe left", value: CGPoint(x: -1, y: 0)),
             movementAccessibilityAction(name: "Strafe right", value: CGPoint(x: 1, y: 0)),
+            menuCursorNudgeAccessibilityAction(name: "Nudge up", offset: CGPoint(x: 0, y: -24)),
+            menuCursorNudgeAccessibilityAction(name: "Nudge down", offset: CGPoint(x: 0, y: 24)),
+            menuCursorNudgeAccessibilityAction(name: "Nudge left", offset: CGPoint(x: -24, y: 0)),
+            menuCursorNudgeAccessibilityAction(name: "Nudge right", offset: CGPoint(x: 24, y: 0)),
             movementAccessibilityAction(name: "Stop movement", value: .zero)
         ]
         addSubview(movePad)
@@ -458,6 +470,18 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
             )
             self.movePad.accessibilityValue = value == .zero ? "Stopped" : name
             self.onMove?(value, value != .zero)
+            return true
+        }
+    }
+
+    private func menuCursorNudgeAccessibilityAction(
+        name: String,
+        offset: CGPoint
+    ) -> UIAccessibilityCustomAction {
+        UIAccessibilityCustomAction(name: name) { [weak self] _ in
+            guard let self, !self.editingLayout, self.menuInteractionActive else { return false }
+            self.onMenuCursorNudge?(offset)
+            self.movePad.accessibilityValue = name
             return true
         }
     }
@@ -694,8 +718,10 @@ final class GoldenPadTouchOverlay: UIView, UIGestureRecognizerDelegate {
 
     private func resolvedPlacement(for key: String) -> UT99TouchPlacement? {
         if let placement = placements[key] { return placement }
-        guard traitCollection.userInterfaceIdiom == .phone,
-              var placement = Self.phoneDefaultPlacements[key] else { return nil }
+        let defaults = traitCollection.userInterfaceIdiom == .phone
+            ? Self.phoneDefaultPlacements
+            : Self.tabletDefaultPlacements
+        guard var placement = defaults[key] else { return nil }
         if touchConfiguration.leftHanded { placement.x = 1 - placement.x }
         return placement
     }

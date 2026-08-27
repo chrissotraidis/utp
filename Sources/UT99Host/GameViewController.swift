@@ -86,7 +86,7 @@ private final class UT99GameSurfaceInputView: UIView {
         switch gesture.state {
         case .began:
             if inputMode == .originalMenu {
-                onPointer?(location, nil, false)
+                onPointer?(location, nil, true)
                 onPointer?(location, true, false)
             } else {
                 onPrimaryAction?(true)
@@ -117,7 +117,10 @@ private final class UT99GameSurfaceInputView: UIView {
             }
             lastHoverLocation = location
             if inputMode == .originalMenu {
-                onPointer?(location, nil, false)
+                // UWindow renders a relative software cursor. Re-anchor it to
+                // every real pointer sample so it cannot drift away from the
+                // system trackpad/mouse location after menus or gameplay.
+                onPointer?(location, nil, true)
             } else {
                 publishLookDelta(from: previous, to: location)
             }
@@ -193,7 +196,7 @@ private final class UT99GameSurfaceInputView: UIView {
 /// controller input through GCController profiles. Keeping controller UI
 /// interaction disabled routes those events to the native game bindings
 /// instead of UIKit focus navigation.
-final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocumentPickerDelegate, UITextFieldDelegate {
+final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocumentPickerDelegate {
     private let gameView = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
     private let gameSurfaceInputView = UT99GameSurfaceInputView()
     private var originalMenuInputActive = true
@@ -203,6 +206,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private let statusLabel = UILabel()
     private let menuButton = UT99HostMenuButton(type: .system)
     private var hostMenuPanel: UIVisualEffectView?
+    private var supportExportNotice: String?
     private var touchSettingsPanel: UIView?
     private weak var touchOpacitySlider: UISlider?
     private weak var touchScaleSlider: UISlider?
@@ -221,7 +225,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var attemptedHotControllerDiscovery = false
     private var menuSelectPressed = false
     private var hardwareTextKeyUsages: Set<Int> = []
-    private let menuTextField = UITextField(frame: .zero)
+    private var activeControllerFallbackPresses: [ObjectIdentifier: UIPress.PressType] = [:]
+    private var lastControllerFallbackMenuVector = CGPoint.zero
+    private var controllerSampleLastLogAt: [String: TimeInterval] = [:]
+    private var controllerSampleWasActive: [String: Bool] = [:]
+    private var menuKeyboardPanel: UIVisualEffectView?
+    private var menuKeyboardLetterButtons: [UIButton] = []
+    private var menuKeyboardShifted = false
+    private var menuKeyboardCompactOverride: Bool?
+    private var lastKeyboardResponderDiagnostic = ""
     private var touchInputWasVisible = false
     private var appleIntegrationObservers: [NSObjectProtocol] = []
     private let networkMonitor = NWPathMonitor()
@@ -248,6 +260,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private weak var onboardingPrimaryButton: UIButton?
     private weak var onboardingSecondaryButton: UIButton?
     private weak var onboardingTertiaryButton: UIButton?
+    private var launchTransitionView: UIView?
     private var isReassertingSDLWindow = false
     private var hasAutoStartedFromArguments = false
     private var hasPresentedMenuSmokeState = false
@@ -278,7 +291,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         requestLandscapeGeometryIfNeeded()
-        becomeFirstResponder()
+        claimKeyboardResponder(reason: "view-did-appear")
         presentSDLWindowIfAvailable()
         presentRecoveryPromptIfNeeded()
         // The host shell has its own bounded Metal presentation requirement
@@ -286,6 +299,22 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // Request one frame after layout so currentDrawable is available.
         gameView.setNeedsDisplay()
         presentRequestedMenuSmokeStateIfNeeded()
+    }
+
+    /// Physical iPad keyboard events only reach `pressesBegan` while the host
+    /// owns UIKit's responder chain. Record state transitions without logging
+    /// any entered text so a missing callback can be distinguished from a
+    /// character rejected later by SDL/UWindow.
+    private func claimKeyboardResponder(reason: String) {
+        let accepted = becomeFirstResponder()
+        let signature = "\(isFirstResponder)|\(view.window?.isKeyWindow == true)"
+        guard signature != lastKeyboardResponderDiagnostic else { return }
+        lastKeyboardResponderDiagnostic = signature
+        NSLog("UT99KeyboardBridge responder reason=%@ accepted=%@ first=%@ keyWindow=%@",
+              reason,
+              accepted ? "true" : "false",
+              isFirstResponder ? "true" : "false",
+              view.window?.isKeyWindow == true ? "true" : "false")
     }
 
     private func presentRequestedMenuSmokeStateIfNeeded() {
@@ -328,13 +357,22 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 let usage = key.keyCode.rawValue
                 if originalMenuInputActive && engineBridge.publishTextEntry(key.characters) {
                     hardwareTextKeyUsages.insert(usage)
-                    NSLog("UT99KeyboardBridge text=%@ usage=%hu", key.characters, usage)
+                    NSLog("UT99KeyboardBridge text accepted characters=%lu usage=%hu",
+                          key.characters.count, usage)
                 } else {
                     engineBridge.publishHardwareKey(usage: usage, pressed: true)
                 }
             } else {
-                prepareControllerFromActiveEvent()
-                publishControllerFallbackPress(press, pressed: true)
+                let nativeControllerOwnedEvent = prepareControllerFromActiveEvent()
+                if nativeControllerOwnedEvent {
+                    NSLog("UT99 controller responder fallback suppressed type=%ld owner=extended",
+                          press.type.rawValue)
+                } else {
+                    activeControllerFallbackPresses[ObjectIdentifier(press)] = press.type
+                    NSLog("UT99 controller responder fallback active type=%ld owner=responder",
+                          press.type.rawValue)
+                    publishControllerFallbackPress(press, pressed: true)
+                }
             }
         }
         if !keyboardPresses.isEmpty { super.pressesBegan(keyboardPresses, with: event) }
@@ -353,7 +391,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                     engineBridge.publishHardwareKey(usage: usage, pressed: false)
                 }
             } else {
-                publishControllerFallbackPress(press, pressed: false)
+                let identifier = ObjectIdentifier(press)
+                if activeControllerFallbackPresses.removeValue(forKey: identifier) != nil {
+                    publishControllerFallbackPress(press, pressed: false)
+                } else {
+                    NSLog("UT99 controller responder fallback release suppressed type=%ld",
+                          press.type.rawValue)
+                }
             }
         }
         if !keyboardPresses.isEmpty { super.pressesEnded(keyboardPresses, with: event) }
@@ -370,7 +414,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                     engineBridge.publishHardwareKey(usage: usage, pressed: false)
                 }
             } else {
-                publishControllerFallbackPress(press, pressed: false)
+                let identifier = ObjectIdentifier(press)
+                if activeControllerFallbackPresses.removeValue(forKey: identifier) != nil {
+                    publishControllerFallbackPress(press, pressed: false)
+                } else {
+                    NSLog("UT99 controller responder fallback cancel suppressed type=%ld",
+                          press.type.rawValue)
+                }
             }
         }
         if !keyboardPresses.isEmpty { super.pressesCancelled(keyboardPresses, with: event) }
@@ -384,17 +434,21 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         if originalMenuInputActive {
             switch press.type {
             case .upArrow:
-                engineBridge.publishMenuCursor(CGPoint(x: 0, y: 1), active: pressed)
+                updateControllerFallbackMenuCursor()
             case .downArrow:
-                engineBridge.publishMenuCursor(CGPoint(x: 0, y: -1), active: pressed)
+                updateControllerFallbackMenuCursor()
             case .leftArrow:
-                engineBridge.publishMenuCursor(CGPoint(x: -1, y: 0), active: pressed)
+                updateControllerFallbackMenuCursor()
             case .rightArrow:
-                engineBridge.publishMenuCursor(CGPoint(x: 1, y: 0), active: pressed)
+                updateControllerFallbackMenuCursor()
             case .select:
                 engineBridge.publishMenuCursorClick(pressed: pressed)
-            case .menu, .playPause:
+            case .menu:
                 engineBridge.publishTouchAction(.pause, pressed: pressed)
+            case .playPause:
+                if pressed {
+                    NSLog("UT99 controller fallback mode switch ignored reason=responder-only")
+                }
             default:
                 NSLog("UT99 controller press fallback unmapped type=%ld pressed=%@",
                       press.type.rawValue, pressed ? "true" : "false")
@@ -402,58 +456,88 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             return
         }
 
-        let usage: UIKeyboardHIDUsage?
         switch press.type {
-        case .upArrow: usage = .keyboardUpArrow
-        case .downArrow: usage = .keyboardDownArrow
-        case .leftArrow: usage = .keyboardLeftArrow
-        case .rightArrow: usage = .keyboardRightArrow
-        case .select:
-            engineBridge.publishTouchAction(.jump, pressed: pressed)
+        case .upArrow, .downArrow, .leftArrow, .rightArrow:
+            // In responder-only hot-connect mode both physical sticks collapse
+            // into these same four UIKit directions. Routing them as movement
+            // makes right-stick look move the player too. Keep touch movement
+            // and look active until iPadOS exposes the extended profile.
+            if pressed {
+                NSLog("UT99 controller fallback gameplay direction ignored type=%ld reason=ambiguous-sticks",
+                      press.type.rawValue)
+            }
             return
-        case .menu:
-            engineBridge.publishTouchAction(.crouch, pressed: pressed)
+        default:
+            if pressed {
+                NSLog("UT99 controller press fallback unmapped type=%ld pressed=%@",
+                      press.type.rawValue, pressed ? "true" : "false")
+            }
+            // Responder-only input contains no controller identity, separate
+            // stick axes, or stable trigger/button profile. Touch owns all
+            // gameplay until GameController publishes an extended profile.
             return
-        case .playPause:
-            engineBridge.publishTouchAction(.pause, pressed: pressed)
-            return
-        default: usage = nil
         }
-        if let usage {
-            NSLog("UT99 controller press fallback type=%ld usage=%hu pressed=%@",
-                  press.type.rawValue, usage.rawValue, pressed ? "true" : "false")
-            engineBridge.publishHardwareKey(usage: usage.rawValue, pressed: pressed)
-        } else if press.type.rawValue == 34 {
-            engineBridge.publishTouchAction(.primaryFire, pressed: pressed)
-        } else if press.type.rawValue == 35 {
-            engineBridge.publishTouchAction(.alternateFire, pressed: pressed)
+    }
+
+    private func updateControllerFallbackMenuCursor() {
+        var raw = CGPoint.zero
+        for type in activeControllerFallbackPresses.values {
+            switch type {
+            case .upArrow: raw.y += 1
+            case .downArrow: raw.y -= 1
+            case .leftArrow: raw.x -= 1
+            case .rightArrow: raw.x += 1
+            default: break
+            }
+        }
+        let magnitude = sqrt(raw.x * raw.x + raw.y * raw.y)
+        let vector: CGPoint
+        if magnitude > 0 {
+            let fallbackSpeed: CGFloat = 0.45
+            vector = CGPoint(
+                x: raw.x / magnitude * fallbackSpeed,
+                y: raw.y / magnitude * fallbackSpeed
+            )
         } else {
-            NSLog("UT99 controller press fallback unmapped type=%ld pressed=%@",
-                  press.type.rawValue, pressed ? "true" : "false")
+            vector = .zero
         }
+        guard vector != lastControllerFallbackMenuVector else { return }
+        lastControllerFallbackMenuVector = vector
+        engineBridge.publishMenuCursor(vector, active: magnitude > 0)
+        NSLog("UT99 controller fallback cursor vector=%.2f,%.2f activePresses=%lu",
+              vector.x, vector.y, activeControllerFallbackPresses.count)
     }
 
     /// Hot-connected controllers can first arrive as responder presses after
     /// the legacy SDL loop takes over. Re-enumerate on that live main-thread
     /// event so the extended profile and its right-stick/trigger handlers are
     /// installed without requiring an app restart.
-    private func prepareControllerFromActiveEvent() {
+    @discardableResult
+    private func prepareControllerFromActiveEvent() -> Bool {
+        // Record ownership before re-enumeration. If this responder edge is
+        // what discovers a hot-connected controller, the native handler could
+        // not have delivered that first edge, so the fallback must carry it.
+        let nativeControllerOwnedEvent = configuredExtendedControllerIsPresent()
+        if nativeControllerOwnedEvent { return true }
+        if controllerFallbackConnected { return false }
         reassertControllerEventRouting()
         let foundExtended = configureAvailableControllers(reason: "active responder event")
         if foundExtended {
             controllerFallbackConnected = false
             updateTouchVisibility()
-            return
+            return nativeControllerOwnedEvent
         }
 
         if !controllerFallbackConnected {
             controllerFallbackConnected = true
-            if UT99TouchConfiguration.load().autoHideForController {
-                controllerAutoHideActive = true
-            }
+            // A responder-only press proves that UIKit saw some controller
+            // input, not that GameController published the separate sticks and
+            // triggers required for gameplay. Never hide the complete touch
+            // controls until a real extended profile exists.
+            controllerAutoHideActive = false
             updateTouchVisibility()
         }
-        guard !attemptedHotControllerDiscovery else { return }
+        guard !attemptedHotControllerDiscovery else { return false }
         attemptedHotControllerDiscovery = true
         GCController.startWirelessControllerDiscovery { [weak self] in
             guard let self else { return }
@@ -463,6 +547,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 DispatchQueue.main.async { [weak self] in self?.updateTouchVisibility() }
             }
         }
+        return false
     }
 
     private func reassertControllerEventRouting() {
@@ -561,25 +646,6 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             touchOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // UWindow's desktop text fields do not automatically summon the iPad
-        // software keyboard. This tiny native responder gives touch-only users
-        // an explicit TYPE TEXT route while forwarding every character to the
-        // already-focused stock field.
-        menuTextField.translatesAutoresizingMaskIntoConstraints = false
-        menuTextField.alpha = 0.01
-        menuTextField.autocorrectionType = .no
-        menuTextField.autocapitalizationType = .none
-        menuTextField.spellCheckingType = .no
-        menuTextField.keyboardType = .asciiCapable
-        menuTextField.returnKeyType = .done
-        menuTextField.delegate = self
-        view.addSubview(menuTextField)
-        NSLayoutConstraint.activate([
-            menuTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            menuTextField.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            menuTextField.widthAnchor.constraint(equalToConstant: 1),
-            menuTextField.heightAnchor.constraint(equalToConstant: 1)
-        ])
         touchOverlay.onAction = { [weak self] action, pressed in
             guard let self else { return }
             NSLog("UT99 touch action=%@ pressed=%@", action.rawValue, pressed ? "true" : "false")
@@ -604,6 +670,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             } else {
                 self.engineBridge.publishTouchMove(value, active: active)
             }
+        }
+        touchOverlay.onMenuCursorNudge = { [weak self] offset in
+            self?.engineBridge.nudgeMenuCursor(by: offset)
         }
         touchOverlay.onLook = { [weak self] value, active in
             self?.engineBridge.publishTouchLook(value, active: active)
@@ -748,13 +817,57 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         if CommandLine.arguments.contains("-UT99DiagnosticsExportSmokeTest") {
             runDiagnosticsExportSmokeTest()
         }
+        if CommandLine.arguments.contains("-UT99ControllerProbe") {
+            statusLabel.text = "CONTROLLER PROBE · connect the Xbox controller now"
+            _ = configureAvailableControllers(reason: "pre-engine controller probe")
+            NSLog("UT99 controller probe armed engineStarted=false")
+        }
         if g2SmokeRequested {
             pendingG2DiagnosticsExport = true
             NSLog("UT99 G2 host smoke started importer=true diagnostics=true metal=true standardTouch=true")
         }
-        if CommandLine.arguments.contains("-UT99AutoStart") {
+        let normalVerifiedLaunch = recoveredSession == nil && isGameDataReady() &&
+            !CommandLine.arguments.dropFirst().contains { $0.hasPrefix("-UT99") }
+        if CommandLine.arguments.contains("-UT99AutoStart") || normalVerifiedLaunch {
+            if normalVerifiedLaunch { showLaunchTransition() }
             waitForLandscapeAndAutoStart(attempt: 0)
         }
+    }
+
+    private func showLaunchTransition() {
+        guard launchTransitionView == nil else { return }
+        let curtain = UIView()
+        curtain.backgroundColor = .black
+        curtain.isUserInteractionEnabled = false
+        curtain.translatesAutoresizingMaskIntoConstraints = false
+
+        let mark = UILabel()
+        mark.text = "UTP"
+        mark.textColor = .white
+        mark.font = .systemFont(ofSize: 34, weight: .black)
+        mark.translatesAutoresizingMaskIntoConstraints = false
+        curtain.addSubview(mark)
+
+        let detail = UILabel()
+        detail.text = "STARTING UNREAL TOURNAMENT"
+        detail.textColor = UIColor.white.withAlphaComponent(0.58)
+        detail.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        detail.translatesAutoresizingMaskIntoConstraints = false
+        curtain.addSubview(detail)
+
+        view.addSubview(curtain)
+        NSLayoutConstraint.activate([
+            curtain.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            curtain.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            curtain.topAnchor.constraint(equalTo: view.topAnchor),
+            curtain.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            mark.centerXAnchor.constraint(equalTo: curtain.centerXAnchor),
+            mark.centerYAnchor.constraint(equalTo: curtain.centerYAnchor, constant: -10),
+            detail.centerXAnchor.constraint(equalTo: curtain.centerXAnchor),
+            detail.topAnchor.constraint(equalTo: mark.bottomAnchor, constant: 8),
+        ])
+        launchTransitionView = curtain
+        view.bringSubviewToFront(curtain)
     }
 
     private func waitForLandscapeAndAutoStart(attempt: Int) {
@@ -813,6 +926,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         if CommandLine.arguments.contains("-UT99SettingsSmokeTest") {
             runSettingsSmokeTest()
         }
+        if CommandLine.arguments.contains("-UT99MenuKeyboardAcceptance") {
+            // Preserve the older flag as an alias for the real edit-box test.
+            // A console-only probe cannot prove that UWindowEditBox accepted
+            // printable text.
+            engineBridge.runPlayerNameNavigationSmokeTest()
+        }
+        if CommandLine.arguments.contains("-UT99PlayerNameNavigationSmokeTest") {
+            engineBridge.runPlayerNameNavigationSmokeTest()
+        }
         if CommandLine.arguments.contains("-UT99PerformanceSmokeTest") {
             engineBridge.runPerformanceSmokeTest()
         }
@@ -858,9 +980,22 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             _ = self?.launchEngine()
         })
         alert.addAction(UIAlertAction(title: "Diagnostics", style: .default) { [weak self] _ in
-            DispatchQueue.main.async { self?.toggleMenu() }
+            DispatchQueue.main.async {
+                self?.supportExportNotice = "RECOVERY DIAGNOSTICS\nExport logs if needed, then start normally or in Safe Mode below."
+                self?.toggleMenu()
+            }
         })
-        alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Not Now", style: .cancel) { [weak self] _ in
+            guard let self else { return }
+            self.transition(to: .ready, reason: "recovery deferred by player")
+            // UIAlertController runs its action before the dismissal animation
+            // has fully restored the presenting hierarchy. Reassert the Ready
+            // surface on the next main-loop turn so the landing panel cannot
+            // remain hidden behind the dismissed recovery sheet.
+            DispatchQueue.main.async { [weak self] in
+                self?.updateOnboardingPanel()
+            }
+        })
         present(alert, animated: true)
     }
 
@@ -918,7 +1053,10 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self?.engineBridge.releaseMovementKeys()
             self?.engineBridge.releaseControllerLook()
             NSLog("UT99 controller disconnected: %@", controller?.vendorName ?? "unknown")
-            DispatchQueue.main.async { [weak self] in self?.updateTouchVisibility() }
+            DispatchQueue.main.async { [weak self] in
+                self?.clearControllerFallbackPresses(reason: "controller-disconnect", rearmMenuCursor: true)
+                self?.updateTouchVisibility()
+            }
         })
         appleIntegrationObservers.append(center.addObserver(
             forName: .GCControllerDidBecomeCurrent, object: nil, queue: nil
@@ -946,8 +1084,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             if self?.hostState == .pausedBySystem {
                 self?.transition(to: .running, reason: "application became active")
             }
-            self?.updateTouchVisibility()
-            self?.activateGameAudioSession()
+            guard let self else { return }
+            self.reassertControllerEventRouting()
+            _ = self.configureAvailableControllers(reason: "application became active")
+            self.updateTouchVisibility()
+            self.activateGameAudioSession()
+            self.presentSDLWindowIfAvailable()
             NSLog("UT99 lifecycle: active")
         })
         appleIntegrationObservers.append(center.addObserver(
@@ -995,7 +1137,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             let reason = (note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? NSNumber)?.uintValue ?? 0
             NSLog("UT99 audio route changed reason=%lu", reason)
         })
-        _ = configureAvailableControllers(reason: "initial integration")
+        let controllerPresentAtLaunch = configureAvailableControllers(reason: "initial integration")
+        if !controllerPresentAtLaunch {
+            // Touch is the safe input baseline for a controller-free launch.
+            // A prior session may have hidden it while a controller was in
+            // use; do not strand the next controller-free startup.
+            UserDefaults.standard.set(true, forKey: Self.touchInputEnabledKey)
+        }
         startControllerMonitor()
         updateTouchVisibility()
         GCController.startWirelessControllerDiscovery { NSLog("UT99 controller discovery finished") }
@@ -1007,20 +1155,22 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // hardware is attached. Keep touch controls visible in that case;
         // only a real attached extended gamepad should take over the screen.
         #if targetEnvironment(simulator)
-        let controllerConnected = false
+        let extendedControllerConnected = false
+        let extendedControllerDescription = "ignored-virtual-profile"
         #else
-        let controllerConnected = controllerFallbackConnected ||
+        let extendedControllerConnected =
             GCController.controllers().contains { $0.extendedGamepad != nil } ||
             GCController.current?.extendedGamepad != nil
+        let extendedControllerDescription = extendedControllerConnected ? "true" : "false"
         #endif
         let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
         let configuration = UT99TouchConfiguration.load()
-        if controllerConnected && !wasExtendedControllerConnected && configuration.autoHideForController {
+        if extendedControllerConnected && !wasExtendedControllerConnected && configuration.autoHideForController {
             controllerAutoHideActive = true
-        } else if !controllerConnected {
+        } else if !extendedControllerConnected {
             controllerAutoHideActive = false
         }
-        wasExtendedControllerConnected = controllerConnected
+        wasExtendedControllerConnected = extendedControllerConnected
         let touchEnabled = isTouchInputEnabled
         let shouldHide = !engineActive || !touchEnabled || controllerAutoHideActive
         if shouldHide && touchInputWasVisible {
@@ -1038,12 +1188,14 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // This transparent surface is also the hardware mouse/trackpad bridge
         // in gameplay, so it must remain active even when touch controls show.
         gameSurfaceInputView.isUserInteractionEnabled = engineActive
-        NSLog("UT99 touch overlay %@ enabled=%@ controller=%@ autoHide=%@ autoHideActive=%@ menuCursorInput=%@",
+        NSLog("UT99 touch overlay %@ enabled=%@ extendedController=%@ responderFallback=%@ autoHide=%@ autoHideActive=%@ pointerMode=%@ pointerSurface=%@",
               shouldHide ? "hidden" : "visible",
               touchEnabled ? "true" : "false",
-              controllerConnected ? "true" : "false",
+              extendedControllerDescription,
+              controllerFallbackConnected ? "true" : "false",
               configuration.autoHideForController ? "true" : "false",
               controllerAutoHideActive ? "true" : "false",
+              pointerFallbackActive ? "menu" : "gameplay",
               gameSurfaceInputView.isUserInteractionEnabled ? "true" : "false")
     }
 
@@ -1068,12 +1220,27 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     private func releaseGameplayInputs() {
+        clearControllerFallbackPresses(reason: "release-gameplay-inputs", rearmMenuCursor: false)
         gameSurfaceInputView.releasePointer()
         touchOverlay.releaseActiveInputs()
         engineBridge.releaseMovementKeys()
         engineBridge.releaseControllerLook()
         engineBridge.releaseMenuCursor()
         engineBridge.publishTouchLook(.zero, active: false)
+    }
+
+    private func clearControllerFallbackPresses(reason: String, rearmMenuCursor: Bool) {
+        let count = activeControllerFallbackPresses.count
+        activeControllerFallbackPresses.removeAll()
+        lastControllerFallbackMenuVector = .zero
+        engineBridge.releaseMenuCursor()
+        if rearmMenuCursor && originalMenuInputActive {
+            engineBridge.beginMenuCursor(canvasSize: currentRendererViewportFrame().size)
+        }
+        if count > 0 {
+            NSLog("UT99 controller fallback cleared reason=%@ presses=%lu rearmed=%@",
+                  reason, count, rearmMenuCursor ? "true" : "false")
+        }
     }
 
     private func releaseTouchInputs() {
@@ -1089,7 +1256,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         touchOverlay.setMenuInteractionActive(active)
         if active {
             engineBridge.beginMenuCursor(canvasSize: currentRendererViewportFrame().size)
+            updateControllerFallbackMenuCursor()
         } else {
+            lastControllerFallbackMenuVector = .zero
             engineBridge.releaseMenuCursor()
         }
         updateTouchVisibility()
@@ -1101,6 +1270,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // Visibility is an independent user choice; changing controller mode
         // must not unexpectedly turn the touch overlay back on.
         setOriginalMenuInputActive(menu)
+        if !menu { prepareResponderFallbackGameplay() }
         refreshHostMenu()
         closeHostMenuPanel()
         NSLog("UT99 touch interface manually selected mode=%@",
@@ -1129,9 +1299,18 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             }.joined(separator: ",")
             if signature != self.lastControllerMonitorSignature {
                 self.lastControllerMonitorSignature = signature
+                let extendedCount = controllers.filter { $0.extendedGamepad != nil }.count
                 NSLog("UT99 controller monitor count=%lu names=%@",
                       controllers.count, signature.isEmpty ? "none" : signature)
-                DispatchQueue.main.async { [weak self] in self?.updateTouchVisibility() }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.updateTouchVisibility()
+                    if CommandLine.arguments.contains("-UT99ControllerProbe") {
+                        self.statusLabel.text = extendedCount > 0
+                            ? "CONTROLLER PROBE · extended profile ready"
+                            : "CONTROLLER PROBE · waiting for extended profile"
+                    }
+                }
             }
         }
         controllerMonitorTimer = timer
@@ -1159,6 +1338,22 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         configuredControllerLock.unlock()
     }
 
+    private func configuredExtendedControllerIsPresent() -> Bool {
+        var controllers = GCController.controllers()
+        if let current = GCController.current,
+           !controllers.contains(where: { $0 === current }) {
+            controllers.append(current)
+        }
+        let connectedIDs = controllers.compactMap { controller -> ObjectIdentifier? in
+            guard controller.extendedGamepad != nil else { return nil }
+            return ObjectIdentifier(controller)
+        }
+        configuredControllerLock.lock()
+        let present = connectedIDs.contains { configuredControllerIDs.contains($0) }
+        configuredControllerLock.unlock()
+        return present
+    }
+
     private func configureController(_ controller: GCController) {
         guard let pad = controller.extendedGamepad else { return }
         let identifier = ObjectIdentifier(controller)
@@ -1181,6 +1376,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 let y = CGFloat(pad.leftThumbstick.yAxis.value)
                 let movement = UT99TouchInputTuning.controllerMovement(CGPoint(x: x, y: y))
                 let active = movement.x != 0 || movement.y != 0
+                self.logControllerSample(
+                    kind: "left-stick",
+                    raw: CGPoint(x: x, y: y),
+                    transformed: movement,
+                    active: active
+                )
                 if self.originalMenuInputActive {
                     let cursor = UT99TouchInputTuning.controllerMenuCursor(CGPoint(x: x, y: y))
                     self.engineBridge.publishMenuCursor(cursor, active: cursor != .zero)
@@ -1200,18 +1401,29 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 let x = movement.x
                 let y = movement.y
                 let active = max(abs(x), abs(y)) > 0.08
+                self.logControllerSample(kind: "dpad", raw: raw, transformed: movement, active: active)
                 if self.originalMenuInputActive {
                     self.engineBridge.publishMenuCursor(CGPoint(x: x, y: y), active: active)
                 } else {
                     self.engineBridge.publishTouchMove(CGPoint(x: x, y: y), active: active)
                 }
             } else if element === pad.rightThumbstick {
-                let x = CGFloat(pad.rightThumbstick.xAxis.value)
-                let y = CGFloat(-pad.rightThumbstick.yAxis.value)
+                let raw = CGPoint(
+                    x: CGFloat(pad.rightThumbstick.xAxis.value),
+                    y: CGFloat(pad.rightThumbstick.yAxis.value)
+                )
+                let transformed = CGPoint(x: raw.x, y: -raw.y)
+                let active = max(abs(transformed.x), abs(transformed.y)) > 0.08
+                self.logControllerSample(
+                    kind: "right-stick",
+                    raw: raw,
+                    transformed: transformed,
+                    active: active
+                )
                 if !self.originalMenuInputActive {
                     self.engineBridge.publishControllerLook(
-                        CGPoint(x: x, y: y),
-                        active: max(abs(x), abs(y)) > 0.08
+                        transformed,
+                        active: active
                     )
                 }
             }
@@ -1241,6 +1453,24 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         }
     }
 
+    private func logControllerSample(
+        kind: String,
+        raw: CGPoint,
+        transformed: CGPoint,
+        active: Bool
+    ) {
+        let now = ProcessInfo.processInfo.systemUptime
+        let stateChanged = controllerSampleWasActive[kind] != active
+        let intervalElapsed = now - (controllerSampleLastLogAt[kind] ?? 0) >= 0.5
+        guard stateChanged || intervalElapsed else { return }
+        controllerSampleWasActive[kind] = active
+        controllerSampleLastLogAt[kind] = now
+        NSLog("UT99 controller sample kind=%@ raw=%.3f,%.3f transformed=%.3f,%.3f active=%@ mode=%@",
+              kind, raw.x, raw.y, transformed.x, transformed.y,
+              active ? "true" : "false",
+              originalMenuInputActive ? "menu" : "gameplay")
+    }
+
     private func toggleInputModeFromController() {
         let menu = !originalMenuInputActive
         // Route the controller immediately on its handler queue. UIKit's main
@@ -1251,6 +1481,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             engineBridge.beginMenuCursor(canvasSize: currentRendererViewportFrame().size)
         } else {
             engineBridge.releaseMenuCursor()
+            prepareResponderFallbackGameplay()
         }
         NSLog("UT99 controller input mode=%@", menu ? "original-menu" : "gameplay-look")
         DispatchQueue.main.async { [weak self] in
@@ -1260,6 +1491,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self.updateTouchVisibility()
             self.refreshHostMenu()
         }
+    }
+
+    private func prepareResponderFallbackGameplay() {
+        guard controllerFallbackConnected else { return }
+        UserDefaults.standard.set(true, forKey: Self.touchInputEnabledKey)
+        controllerAutoHideActive = false
+        supportExportNotice = "CONTROLLER MENU-ONLY\nThis controller connected after UTP started, so iPadOS did not expose its separate sticks and triggers. Touch gameplay controls remain on. For full Xbox gameplay, reopen UTP with the controller already connected."
+        updateTouchVisibility()
+        NSLog("UT99 controller responder fallback gameplay protected touch=true")
     }
 
     private func bind(_ input: GCControllerButtonInput,
@@ -1472,6 +1712,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             onboardingPrimaryButton?.accessibilityHint = "Explains the approved source and asks before downloading"
             onboardingSecondaryButton?.accessibilityHint = "Selects an existing Unreal Tournament folder or ZIP from Files"
         }
+        NSLog("UT99 onboarding state=%@ landing=%@ hidden=%@ frame=%@ window=%@",
+              hostState.rawValue,
+              landingState ? "true" : "false",
+              panel.isHidden ? "true" : "false",
+              panel.frame.debugDescription,
+              panel.window == nil ? "none" : "attached")
     }
 
     @objc private func onboardingPrimaryTapped() {
@@ -1824,7 +2070,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             action("Copy Build & Runtime Info", symbol: "doc.on.doc") { [weak self] in
                 self?.copyDiagnostics()
             },
-            action("Export Diagnostic Log…", symbol: "square.and.arrow.up") { [weak self] in
+            action("Export Logs…", symbol: "square.and.arrow.up") { [weak self] in
                 self?.exportDiagnostics()
             },
             action("Prepare Safe Mode", symbol: "shield") { [weak self] in
@@ -1890,6 +2136,11 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        if let supportExportNotice {
+            stack.addArrangedSubview(hostPanelMessage(supportExportNotice))
+            self.supportExportNotice = nil
+        }
+
         let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
         if engineActive {
             stack.addArrangedSubview(hostPanelButton(
@@ -1903,12 +2154,26 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 self?.engineBridge.publishTouchAction(.pause, pressed: false)
             })
             if originalMenuInputActive {
-                stack.addArrangedSubview(hostPanelButton("TYPE TEXT", symbol: "keyboard") { [weak self] in
-                    self?.showMenuTextKeyboard()
+                let keyboardIsOpen = menuKeyboardPanel != nil
+                stack.addArrangedSubview(hostPanelButton(
+                    keyboardIsOpen ? "CLOSE KEYBOARD" : "OPEN KEYBOARD",
+                    symbol: "keyboard"
+                ) { [weak self] in
+                    self?.toggleMenuTextKeyboard()
                 })
             }
+        } else if hostState == .crashed && isGameDataReady() {
+            stack.addArrangedSubview(hostPanelButton("TRY NORMAL START", symbol: "play.fill") { [weak self] in
+                self?.closeHostMenuPanel()
+                _ = self?.launchEngine()
+            })
+            stack.addArrangedSubview(hostPanelButton("START IN SAFE MODE", symbol: "shield.fill") { [weak self] in
+                self?.closeHostMenuPanel()
+                _ = self?.launchEngine(safeMode: true)
+            })
         } else if isGameDataReady() {
             stack.addArrangedSubview(hostPanelButton("PLAY OFFLINE", symbol: "play.fill") { [weak self] in
+                self?.closeHostMenuPanel()
                 self?.startEngine()
             })
         }
@@ -1926,6 +2191,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         })
         stack.addArrangedSubview(hostPanelButton("MULTIPLAYER", symbol: "network") { [weak self] in
             self?.showMultiplayerInfo()
+        })
+        stack.addArrangedSubview(hostPanelButton("EXPORT LOGS", symbol: "square.and.arrow.up") { [weak self] in
+            self?.exportDiagnostics()
+        })
+        stack.addArrangedSubview(hostPanelButton("REPORT A PROBLEM", symbol: "exclamationmark.bubble") { [weak self] in
+            self?.reportAProblem()
         })
 
         panel.contentView.addSubview(title)
@@ -1956,30 +2227,157 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     private func showMenuTextKeyboard() {
         closeHostMenuPanel()
-        menuTextField.text = ""
-        menuTextField.becomeFirstResponder()
-        NSLog("UT99 touch text keyboard presented")
-    }
+        guard menuKeyboardPanel == nil else { return }
+        let compact = menuKeyboardCompactOverride ?? (traitCollection.userInterfaceIdiom == .phone)
+        let keyFontSize: CGFloat = compact ? 12 : 15
+        menuKeyboardShifted = true
+        menuKeyboardLetterButtons.removeAll()
 
-    func textField(
-        _ textField: UITextField,
-        shouldChangeCharactersIn range: NSRange,
-        replacementString string: String
-    ) -> Bool {
-        if string.isEmpty {
-            for _ in 0..<max(range.length, 1) { engineBridge.publishMenuBackspace() }
-        } else {
-            engineBridge.publishTextEntry(string)
+        let panel = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterialDark))
+        panel.layer.cornerRadius = 18
+        panel.layer.masksToBounds = true
+        panel.translatesAutoresizingMaskIntoConstraints = false
+
+        let title = UILabel()
+        title.text = compact ? "UT TEXT INPUT" : "TYPE INTO THE SELECTED UT FIELD"
+        title.textColor = UIColor.white.withAlphaComponent(0.78)
+        title.font = .monospacedSystemFont(ofSize: compact ? 10 : 12, weight: .semibold)
+        title.adjustsFontSizeToFitWidth = true
+        title.minimumScaleFactor = 0.75
+
+        let size = menuKeyboardKey(compact ? "LARGE" : "SMALL", fontSize: keyFontSize) { [weak self] in
+            self?.toggleMenuKeyboardSize()
         }
-        // The native field is only an input-method bridge. Keeping it empty
-        // prevents UIKit's local buffer from drifting away from UWindow.
-        return false
+        let close = menuKeyboardKey("CLOSE", fontSize: keyFontSize) { [weak self] in
+            self?.closeMenuTextKeyboard()
+        }
+        let header = UIStackView(arrangedSubviews: [title, size, close])
+        header.axis = .horizontal
+        header.alignment = .center
+        header.spacing = compact ? 6 : 12
+
+        let rows = UIStackView()
+        rows.axis = .vertical
+        rows.spacing = compact ? 3 : 7
+        for characters in ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"] {
+            let row = UIStackView()
+            row.axis = .horizontal
+            row.distribution = .fillEqually
+            row.spacing = compact ? 3 : 6
+            for character in characters {
+                let raw = String(character)
+                let button = menuKeyboardKey(raw, fontSize: keyFontSize) { [weak self] in
+                    guard let self else { return }
+                    let text = self.menuKeyboardShifted ? raw.uppercased() : raw.lowercased()
+                    _ = self.engineBridge.publishMenuCharacter(text)
+                    if self.menuKeyboardShifted && raw.rangeOfCharacter(from: .letters) != nil {
+                        self.menuKeyboardShifted = false
+                        self.updateMenuKeyboardLetterCase()
+                    }
+                }
+                if raw.rangeOfCharacter(from: .letters) != nil {
+                    button.accessibilityIdentifier = raw.lowercased()
+                    menuKeyboardLetterButtons.append(button)
+                }
+                row.addArrangedSubview(button)
+            }
+            row.heightAnchor.constraint(equalToConstant: compact ? 31 : 42).isActive = true
+            rows.addArrangedSubview(row)
+        }
+
+        let shift = menuKeyboardKey("SHIFT", fontSize: keyFontSize) { [weak self] in
+            guard let self else { return }
+            self.menuKeyboardShifted.toggle()
+            self.updateMenuKeyboardLetterCase()
+        }
+        let space = menuKeyboardKey("SPACE", fontSize: keyFontSize) { [weak self] in
+            _ = self?.engineBridge.publishMenuCharacter(" ")
+        }
+        let backspace = menuKeyboardKey("DELETE", fontSize: keyFontSize) { [weak self] in
+            self?.engineBridge.publishMenuBackspace()
+        }
+        let done = menuKeyboardKey("DONE", fontSize: keyFontSize) { [weak self] in
+            self?.engineBridge.publishMenuReturn()
+            self?.closeMenuTextKeyboard()
+        }
+        let actions = UIStackView(arrangedSubviews: [shift, space, backspace, done])
+        actions.axis = .horizontal
+        actions.distribution = .fillEqually
+        actions.spacing = compact ? 3 : 7
+        actions.heightAnchor.constraint(equalToConstant: compact ? 36 : 46).isActive = true
+
+        let stack = UIStackView(arrangedSubviews: [header, rows, actions])
+        stack.axis = .vertical
+        stack.spacing = compact ? 6 : 10
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView.addSubview(stack)
+        view.addSubview(panel)
+        NSLayoutConstraint.activate([
+            panel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: compact ? 8 : 18),
+            panel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: compact ? -8 : -18),
+            panel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: compact ? -8 : -18),
+            stack.leadingAnchor.constraint(equalTo: panel.contentView.leadingAnchor, constant: compact ? 8 : 14),
+            stack.trailingAnchor.constraint(equalTo: panel.contentView.trailingAnchor, constant: compact ? -8 : -14),
+            stack.topAnchor.constraint(equalTo: panel.contentView.topAnchor, constant: compact ? 8 : 12),
+            stack.bottomAnchor.constraint(equalTo: panel.contentView.bottomAnchor, constant: compact ? -8 : -14),
+        ])
+        menuKeyboardPanel = panel
+        updateMenuKeyboardLetterCase()
+        view.bringSubviewToFront(panel)
+        view.bringSubviewToFront(menuButton)
+        NSLog("UT99 touch text keyboard presented mode=host-panel compact=%@",
+              compact ? "true" : "false")
     }
 
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        engineBridge.publishMenuReturn()
-        textField.resignFirstResponder()
-        return false
+    private func menuKeyboardKey(
+        _ title: String,
+        fontSize: CGFloat = 15,
+        handler: @escaping () -> Void
+    ) -> UIButton {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = title
+        configuration.baseBackgroundColor = UIColor(white: 0.18, alpha: 0.94)
+        configuration.baseForegroundColor = .white
+        configuration.cornerStyle = .medium
+        let button = UIButton(configuration: configuration)
+        button.titleLabel?.font = .systemFont(ofSize: fontSize, weight: .semibold)
+        button.addAction(UIAction { _ in handler() }, for: .touchUpInside)
+        return button
+    }
+
+    private func updateMenuKeyboardLetterCase() {
+        for button in menuKeyboardLetterButtons {
+            guard let raw = button.accessibilityIdentifier else { continue }
+            var configuration = button.configuration
+            configuration?.title = menuKeyboardShifted ? raw.uppercased() : raw.lowercased()
+            button.configuration = configuration
+        }
+    }
+
+    private func closeMenuTextKeyboard() {
+        menuKeyboardPanel?.removeFromSuperview()
+        menuKeyboardPanel = nil
+        menuKeyboardLetterButtons.removeAll()
+        menuKeyboardShifted = false
+        claimKeyboardResponder(reason: "host-keyboard-dismissed")
+        NSLog("UT99 touch text keyboard dismissed mode=host-panel")
+    }
+
+    private func toggleMenuTextKeyboard() {
+        closeHostMenuPanel()
+        if menuKeyboardPanel == nil {
+            showMenuTextKeyboard()
+        } else {
+            closeMenuTextKeyboard()
+        }
+    }
+
+    private func toggleMenuKeyboardSize() {
+        let compact = menuKeyboardCompactOverride ?? (traitCollection.userInterfaceIdiom == .phone)
+        menuKeyboardCompactOverride = !compact
+        menuKeyboardPanel?.removeFromSuperview()
+        menuKeyboardPanel = nil
+        showMenuTextKeyboard()
     }
 
     private func hostPanelButton(
@@ -2006,6 +2404,17 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         button.contentHorizontalAlignment = .leading
         button.heightAnchor.constraint(equalToConstant: 46).isActive = true
         return button
+    }
+
+    private func hostPanelMessage(_ message: String) -> UILabel {
+        let label = UILabel()
+        label.text = message
+        label.textColor = UIColor(red: 0.35, green: 0.92, blue: 0.88, alpha: 1)
+        label.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        label.numberOfLines = 0
+        label.textAlignment = .left
+        label.accessibilityLabel = message
+        return label
     }
 
     private func closeHostMenuPanel() {
@@ -3001,19 +3410,91 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     @objc private func exportDiagnostics() {
-        let zipURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("UTP-Diagnostics-\(Int(Date().timeIntervalSince1970)).zip")
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let zipURL = documents.appendingPathComponent("UTP-Logs-Latest.zip")
+        NSLog("UT99 support log export begin")
         do {
-            try writeDiagnosticsArchive(to: zipURL)
-            statusLabel.text = "Diagnostics exported"
-            let share = UIActivityViewController(activityItems: [zipURL], applicationActivities: nil)
-            if let popover = share.popoverPresentationController {
-                popover.sourceView = menuButton
-                popover.sourceRect = menuButton.bounds
-            }
-            present(share, animated: true)
+            try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+            let entries = supportLogEntries()
+            try UT99DiagnosticsArchive.write(entries: entries, to: zipURL)
+            let bytes = entries.reduce(0) { $0 + $1.1.count }
+            NSLog("UT99 support log archive ready entries=%lu inputBytes=%lu",
+                  entries.count, bytes)
+            NSLog("UT99 support log saved file=Documents/%@", zipURL.lastPathComponent)
+            supportExportNotice = "LOGS SAVED\nFiles → On My iPad → UTP → \(zipURL.lastPathComponent)"
+            toggleMenu()
         } catch {
-            presentMenuInfo(title: "Diagnostics", message: "Export failed: \(error.localizedDescription)")
+            NSLog("UT99 support log export failed: %@", error.localizedDescription)
+            supportExportNotice = "EXPORT FAILED\n\(error.localizedDescription)"
+            toggleMenu()
+        }
+    }
+
+    private func supportLogEntries() -> [(String, Data)] {
+        let identity = appIdentity()
+        let configuration = UT99TouchConfiguration.load()
+        var controllers = GCController.controllers()
+        if let current = GCController.current,
+           !controllers.contains(where: { $0 === current }) {
+            controllers.append(current)
+        }
+        let extendedControllers = controllers.filter { $0.extendedGamepad != nil }
+        let summary = UT99DiagnosticRedactor.redact("""
+        UTP support logs
+        Generated: \(ISO8601DateFormatter().string(from: Date()))
+        Privacy: paths and common secret fields are redacted; review server addresses before sharing.
+        Host: v\(identity.version) (\(identity.build))
+        Host state: \(hostState.rawValue)
+        System: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        Touch: enabled=\(isTouchInputEnabled) mode=\(originalMenuInputActive ? "menu" : "gameplay") autoHide=\(configuration.autoHideForController)
+        Controller: discovered=\(controllers.count) extended=\(extendedControllers.count) responderFallback=\(controllerFallbackConnected) autoHideActive=\(controllerAutoHideActive)
+        Pointer: owner=host-uikit mode=\(originalMenuInputActive ? "menu" : "gameplay") surfaceEnabled=\(gameSurfaceInputView.isUserInteractionEnabled)
+        \(runtimeRecovery.diagnosticSummary())
+        """)
+        var entries = [("diagnostics.txt", Data(summary.utf8))]
+        for url in diagnosticLogURLs(at: dataSupportRoot()) {
+            guard let data = boundedLogData(at: url, maximumBytes: 524_288) else { continue }
+            let text = String(decoding: data, as: UTF8.self)
+            entries.append(("logs/\(url.lastPathComponent)", Data(UT99DiagnosticRedactor.redact(text).utf8)))
+        }
+        entries.append(contentsOf: runtimeRecovery.diagnosticArtifacts())
+        return entries
+    }
+
+    private func boundedLogData(at url: URL, maximumBytes: Int) -> Data? {
+        guard maximumBytes > 0,
+              let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        let start = size > UInt64(maximumBytes) ? size - UInt64(maximumBytes) : 0
+        try? handle.seek(toOffset: start)
+        return try? handle.readToEnd()
+    }
+
+    @objc private func reportAProblem() {
+        var components = URLComponents(string: "https://github.com/chrissotraidis/utp/issues/new")
+        components?.queryItems = [
+            URLQueryItem(name: "body", value: """
+            ### What happened?
+
+            ### Steps to reproduce
+
+            ### Device and controller
+
+            ### Diagnostics
+            Attach UTP-Logs-Latest.zip from Files → On My iPad → UTP.
+            """)
+        ]
+        guard let url = components?.url else {
+            presentMenuInfo(title: "Report a Problem", message: "The UTP issue page could not be opened.")
+            return
+        }
+        UIApplication.shared.open(url, options: [:]) { [weak self] opened in
+            guard !opened else { return }
+            self?.presentMenuInfo(
+                title: "Report a Problem",
+                message: "Open github.com/chrissotraidis/utp/issues to report the problem."
+            )
         }
     }
 
@@ -3149,6 +3630,11 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         let result = engineBridge.startOriginalEntry(connectURL: connectURL, safeMode: safeMode) { [weak self] exitCode in
             self?.engineDidExit(exitCode)
         }
+        // UT owns the main thread after entry, so a deferred UIKit/SDL-window
+        // callback cannot be responsible for dismissing the launch curtain.
+        // The entry result is the last deterministic synchronous boundary.
+        launchTransitionView?.removeFromSuperview()
+        launchTransitionView = nil
         statusLabel.text = result.statusText
         switch result {
         case .started:
@@ -3222,14 +3708,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         backdropLayer.isHidden = true
         for subview in view.subviews where subview !== gameView &&
             subview !== gameSurfaceInputView && subview !== touchOverlay &&
-            subview !== touchSettingsPanel && subview !== menuButton {
+            subview !== touchSettingsPanel && subview !== menuKeyboardPanel &&
+            subview !== launchTransitionView && subview !== menuButton {
             subview.isHidden = true
         }
         view.isUserInteractionEnabled = true
         gameSurfaceInputView.isHidden = false
         gameSurfaceInputView.isUserInteractionEnabled = true
-        touchOverlay.isUserInteractionEnabled = true
-        touchOverlay.isHidden = false
         view.bringSubviewToFront(gameSurfaceInputView)
         view.bringSubviewToFront(touchOverlay)
         if let hostMenuPanel {
@@ -3237,8 +3722,10 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             view.bringSubviewToFront(hostMenuPanel)
         }
         view.bringSubviewToFront(menuButton)
+        if let launchTransitionView { view.bringSubviewToFront(launchTransitionView) }
         hostWindow.windowLevel = UIWindow.Level.normal + 1
         hostWindow.makeKeyAndVisible()
+        updateTouchVisibility()
         NSLog("UT99EngineBridge prepared host touch overlay above SDL hostBounds=%@ overlay=%@ menu=%@",
               hostWindow.bounds.debugDescription, touchOverlay.frame.debugDescription,
               menuButton.frame.debugDescription)
@@ -3330,7 +3817,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         backdropLayer.isHidden = true
         for subview in view.subviews where subview !== gameView &&
             subview !== gameSurfaceInputView && subview !== touchOverlay &&
-            subview !== touchSettingsPanel && subview !== menuButton {
+            subview !== touchSettingsPanel && subview !== menuKeyboardPanel &&
+            subview !== launchTransitionView && subview !== menuButton {
             subview.isHidden = true
         }
         // SDL can recreate or reorder its window after the first scene
@@ -3340,7 +3828,6 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         view.isUserInteractionEnabled = true
         gameSurfaceInputView.isUserInteractionEnabled = true
         gameSurfaceInputView.isHidden = false
-        touchOverlay.isUserInteractionEnabled = true
         view.bringSubviewToFront(gameSurfaceInputView)
         view.bringSubviewToFront(touchOverlay)
         if let hostMenuPanel {
@@ -3351,10 +3838,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             touchSettingsPanel.isHidden = false
             view.bringSubviewToFront(touchSettingsPanel)
         }
+        if let menuKeyboardPanel { view.bringSubviewToFront(menuKeyboardPanel) }
         view.bringSubviewToFront(menuButton)
+        launchTransitionView?.removeFromSuperview()
+        launchTransitionView = nil
         hostWindow.windowLevel = UIWindow.Level.normal + 1
         hostWindow.makeKeyAndVisible()
-        hostWindow.rootViewController?.becomeFirstResponder()
+        claimKeyboardResponder(reason: "sdl-window-attached")
         NSLog("UT99EngineBridge attached SDL window to active scene hostKey=%@ hostBounds=%@ engineBounds=%@ orientation=%ld",
               hostWindow.isKeyWindow ? "true" : "false",
               hostWindow.bounds.debugDescription, engineWindow.bounds.debugDescription,
@@ -3404,7 +3894,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             // builds could leave the v1 marker with maps but no INI/packages,
             // which makes the original entry fail its first config read.
             let marker = supportRoot.appendingPathComponent(".ut99-bundled-data-v2")
-            if !FileManager.default.fileExists(atPath: marker.path) {
+            let forceBundledDataSync = CommandLine.arguments.contains("-UT99ForceBundledDataSync")
+            if forceBundledDataSync || !FileManager.default.fileExists(atPath: marker.path) {
                 for item in try FileManager.default.contentsOfDirectory(at: bundledData, includingPropertiesForKeys: nil) {
                     let destination = supportRoot.appendingPathComponent(item.lastPathComponent)
                     var mutableConfigurations: [String: Data] = [:]
@@ -3718,6 +4209,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         case let .success(imported):
             statusLabel.text = "Imported and verified \(imported) UT99 content files"
             transition(to: .ready, reason: "background transactional data import committed")
+            if !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("-UT99") }) {
+                waitForLandscapeAndAutoStart(attempt: 0)
+            }
         case let .failure(error):
             if error is UT99ImportCancelled {
                 statusLabel.text = error.localizedDescription

@@ -53,7 +53,6 @@ final class UT99EngineBridge {
     private var menuCursorTimer: DispatchSourceTimer?
     private var menuCursorPosition = CGPoint.zero
     private var menuCursorCanvasSize = CGSize.zero
-
     init() {
         let defaults = UserDefaults.standard
         defaults.register(defaults: [
@@ -170,8 +169,15 @@ final class UT99EngineBridge {
         let defaults = UserDefaults.standard
         let safeTextures = safeMode || defaults.bool(forKey: SettingsKey.safeTextures)
         let verticalSync = safeMode || defaults.bool(forKey: SettingsKey.verticalSync)
+        #if targetEnvironment(simulator)
+        // Simulator runs are deterministic and silent unless a dedicated
+        // audio experiment explicitly opts in. The physical app continues to
+        // honor the player's persisted audio preference.
+        let audioEnabled = !safeMode && CommandLine.arguments.contains("-UT99AudioEnabled")
+        #else
         let audioEnabled = !safeMode &&
             (CommandLine.arguments.contains("-UT99AudioEnabled") || defaults.bool(forKey: SettingsKey.audioEnabled))
+        #endif
         applyAppleGraphicsProfile(
             to: URL(fileURLWithPath: iniPath),
             safeTextures: safeTextures,
@@ -611,6 +617,23 @@ final class UT99EngineBridge {
         }
     }
 
+    func nudgeMenuCursor(by offset: CGPoint) {
+        menuCursorQueue.async { [weak self] in
+            guard let self,
+                  self.menuCursorCanvasSize.width > 0,
+                  self.menuCursorCanvasSize.height > 0 else { return }
+            self.menuCursorPosition.x = min(
+                max(self.menuCursorPosition.x + offset.x, 0),
+                self.menuCursorCanvasSize.width
+            )
+            self.menuCursorPosition.y = min(
+                max(self.menuCursorPosition.y + offset.y, 0),
+                self.menuCursorCanvasSize.height
+            )
+            self.publishGameSurfacePointer(location: self.menuCursorPosition, pressed: nil)
+        }
+    }
+
     private func advanceMenuCursor() {
         let magnitude = min(CGFloat(1), sqrt(
             menuCursorValue.x * menuCursorValue.x + menuCursorValue.y * menuCursorValue.y
@@ -715,7 +738,11 @@ final class UT99EngineBridge {
                 ) -> UInt32
                 _ = unsafeBitCast(stateSymbol, to: GetMouseState.self)(&stateX, &stateY)
             }
-            if pressed != nil || anchor {
+            let canvasWidth = Int32(max(0, Int(menuCursorCanvasSize.width.rounded(.down))))
+            let canvasHeight = Int32(max(0, Int(menuCursorCanvasSize.height.rounded(.down))))
+            let edgeSample = anchor && canvasWidth > 0 && canvasHeight > 0 &&
+                (x <= 8 || y <= 8 || x >= canvasWidth - 8 || y >= canvasHeight - 8)
+            if pressed != nil || edgeSample {
                 NSLog("UT99PointerBridge host=%.1f,%.1f calibrated=%.1f,%.1f logical=%d,%d state=%d,%d windowID=%u pressed=%@ anchor=%@ transport=stateful result=%d",
                       location.x, location.y, enginePoint.x, enginePoint.y, x, y, stateX, stateY, windowID,
                       pressed.map { $0 ? "true" : "false" } ?? "motion",
@@ -765,23 +792,41 @@ final class UT99EngineBridge {
 
     @discardableResult
     func publishTextEntry(_ text: String) -> Bool {
-        if let handle, let symbol = dlsym(handle, "SDL_UT99SendKeyboardText") {
-            typealias SendText = @convention(c) (UnsafePointer<CChar>?) -> Int32
-            let sendText = unsafeBitCast(symbol, to: SendText.self)
-            return text.withCString { sendText($0) >= 0 }
+        guard !text.isEmpty,
+              let handle,
+              let symbol = dlsym(handle, "SDL_UT99SendKeyboardText") else {
+            return false
         }
-        let strokes = text.unicodeScalars.compactMap { scalar -> (usage: Int, shifted: Bool)? in
-            guard scalar.isASCII else { return nil }
-            return hardwareStroke(for: UInt8(scalar.value))
+        typealias SendText = @convention(c) (UnsafePointer<CChar>?) -> Int32
+        let sendText = unsafeBitCast(symbol, to: SendText.self)
+        var posted: Int32 = 0
+        for character in text {
+            let result = String(character).withCString { sendText($0) }
+            guard result > 0 else {
+                NSLog("UT99KeyboardBridge text post characters=%lu posted=%d result=%d",
+                      text.count, posted, result)
+                return false
+            }
+            posted += result
         }
-        guard !strokes.isEmpty, strokes.count == text.unicodeScalars.count else { return false }
-        for stroke in strokes {
-            if stroke.shifted { publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardLeftShift.rawValue, pressed: true) }
-            publishHardwareKey(usage: stroke.usage, pressed: true)
-            publishHardwareKey(usage: stroke.usage, pressed: false)
-            if stroke.shifted { publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardLeftShift.rawValue, pressed: false) }
-        }
+        NSLog("UT99KeyboardBridge text post characters=%lu posted=%d result=1",
+              text.count, posted)
         return true
+    }
+
+    /// Both software and physical printable keys use SDL's ordered
+    /// KeyDown -> TextInput -> KeyUp bridge required by UWindowEditBox.
+    @discardableResult
+    func publishMenuCharacter(_ text: String) -> Bool {
+        guard text.unicodeScalars.count == 1 else {
+            NSLog("UT99KeyboardBridge menu character rejected characters=%lu reason=not-single-scalar",
+                  text.count)
+            return false
+        }
+        let accepted = publishTextEntry(text)
+        NSLog("UT99KeyboardBridge menu character characters=%lu route=text accepted=%@",
+              text.count, accepted ? "true" : "false")
+        return accepted
     }
 
     func publishMenuBackspace() {
@@ -792,26 +837,6 @@ final class UT99EngineBridge {
     func publishMenuReturn() {
         publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardReturnOrEnter.rawValue, pressed: true)
         publishHardwareKey(usage: UIKeyboardHIDUsage.keyboardReturnOrEnter.rawValue, pressed: false)
-    }
-
-    private func hardwareStroke(for ascii: UInt8) -> (usage: Int, shifted: Bool)? {
-        if ascii >= Character("a").asciiValue!, ascii <= Character("z").asciiValue! {
-            return (UIKeyboardHIDUsage.keyboardA.rawValue + Int(ascii - Character("a").asciiValue!), false)
-        }
-        if ascii >= Character("A").asciiValue!, ascii <= Character("Z").asciiValue! {
-            return (UIKeyboardHIDUsage.keyboardA.rawValue + Int(ascii - Character("A").asciiValue!), true)
-        }
-        if ascii >= Character("1").asciiValue!, ascii <= Character("9").asciiValue! {
-            return (UIKeyboardHIDUsage.keyboard1.rawValue + Int(ascii - Character("1").asciiValue!), false)
-        }
-        switch ascii {
-        case Character("0").asciiValue!: return (UIKeyboardHIDUsage.keyboard0.rawValue, false)
-        case Character(" ").asciiValue!: return (UIKeyboardHIDUsage.keyboardSpacebar.rawValue, false)
-        case Character("-").asciiValue!: return (UIKeyboardHIDUsage.keyboardHyphen.rawValue, false)
-        case Character("_").asciiValue!: return (UIKeyboardHIDUsage.keyboardHyphen.rawValue, true)
-        case Character(".").asciiValue!: return (UIKeyboardHIDUsage.keyboardPeriod.rawValue, false)
-        default: return nil
-        }
     }
 
     private func SDLKeySym(usage: Int) -> Int32? {
@@ -913,6 +938,61 @@ final class UT99EngineBridge {
         }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(2_100)) { [weak self] in
             self?.appendSmokeLog("complete")
+        }
+    }
+
+    /// Simulator-only navigation probe for the real Player Name acceptance
+    /// target. Keep this separate from the keyboard recipe so a bad coordinate
+    /// cannot be mistaken for a failed text event.
+    func runPlayerNameNavigationSmokeTest() {
+        let schedule: (Int, @escaping () -> Void) -> Void = { milliseconds, work in
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                deadline: .now() + .milliseconds(milliseconds),
+                execute: work
+            )
+        }
+        let keyPress: (Int32) -> Void = { [weak self] key in
+            self?.pushKey(key: key, pressed: true)
+            self?.pushKey(key: key, pressed: false)
+        }
+
+        schedule(3_000) {
+            NSLog("UT99 player-name navigation select first Game item")
+            keyPress((1 << 30) | 81) // Down arrow
+        }
+        schedule(3_350) {
+            NSLog("UT99 player-name navigation open Start Unreal Tournament")
+            keyPress(13) // Return
+        }
+        schedule(4_500) { [weak self] in
+            NSLog("UT99 player-name navigation anchor cursor")
+            self?.publishGameSurfacePointer(location: .zero, pressed: nil, anchor: true)
+        }
+        schedule(4_850) { [weak self] in
+            guard let self else { return }
+            // ConfiguredGUIScale=3 renders this legacy hit point in the center
+            // of the Name edit box in the 844x390 SDL surface.
+            let nameField = CGPoint(x: 83, y: 50)
+            NSLog("UT99 player-name navigation focus Name field legacy=83,50")
+            self.publishGameSurfacePointer(location: nameField, pressed: nil)
+        }
+        schedule(5_000) { [weak self] in
+            self?.publishGameSurfacePointer(location: CGPoint(x: 83, y: 50), pressed: true)
+        }
+        schedule(5_150) { [weak self] in
+            self?.publishGameSurfacePointer(location: CGPoint(x: 83, y: 50), pressed: false)
+        }
+        schedule(5_450) { [weak self] in
+            NSLog("UT99 player-name acceptance control=backspace")
+            self?.publishMenuBackspace()
+        }
+        schedule(5_800) { [weak self] in
+            let accepted = self?.publishTextEntry("Ab 9") ?? false
+            NSLog("UT99 player-name acceptance target=Name route=production-text accepted=%@",
+                  accepted ? "true" : "false")
+        }
+        schedule(6_150) {
+            NSLog("UT99 player-name navigation complete target=Name route=production-text")
         }
     }
 

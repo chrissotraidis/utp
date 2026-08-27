@@ -12,6 +12,8 @@ rg -q 'case safeMode = "SafeMode"' Sources/UT99Host/GameViewController.swift
 rg -q 'blocked duplicate engine start' Sources/UT99Host/GameViewController.swift
 rg -q 'Previous Session Interrupted' Sources/UT99Host/GameViewController.swift
 rg -q 'Start in Safe Mode' Sources/UT99Host/GameViewController.swift
+rg -Fq 'transition(to: .ready, reason: "recovery deferred by player")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 onboarding state=%@ landing=%@ hidden=%@ frame=%@ window=%@' Sources/UT99Host/GameViewController.swift
 rg -q 'runtimeRecovery\.beginSession' Sources/UT99Host/GameViewController.swift
 rg -q 'runtimeRecovery\.recordFailure' Sources/UT99Host/GameViewController.swift
 rg -q 'runtimeRecovery\.finishCleanly' Sources/UT99Host/GameViewController.swift
@@ -114,6 +116,25 @@ rg -Fq 'menuButton.showsMenuAsPrimaryAction = false' Sources/UT99Host/GameViewCo
 rg -Fq 'private var hostMenuPanel: UIVisualEffectView?' Sources/UT99Host/GameViewController.swift
 rg -Fq '"USE GAMEPLAY CONTROLS" : "USE MENU CONTROLS"' Sources/UT99Host/GameViewController.swift
 rg -Fq 'hostPanelButton("ESCAPE / UT MENU"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'keyboardIsOpen ? "CLOSE KEYBOARD" : "OPEN KEYBOARD"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("TRY NORMAL START"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("START IN SAFE MODE"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'RECOVERY DIAGNOSTICS' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("EXPORT LOGS"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'self?.exportDiagnostics()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 support log archive ready' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private func supportLogEntries()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'maximumBytes: 524_288' Sources/UT99Host/GameViewController.swift
+rg -Fq 'FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UTP-Logs-Latest.zip' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Files → On My iPad → UTP' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private func hostPanelMessage' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("REPORT A PROBLEM"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'https://github.com/chrissotraidis/utp/issues/new' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Attach UTP-Logs-Latest.zip from Files' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let normalVerifiedLaunch = recoveredSession == nil && isGameDataReady()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'if normalVerifiedLaunch { showLaunchTransition() }' Sources/UT99Host/GameViewController.swift
+rg -Fq 'launchTransitionView?.removeFromSuperview()' Sources/UT99Host/GameViewController.swift
 if rg -Fq 'hostPanelButton("RESUME GAME"' Sources/UT99Host/GameViewController.swift; then
     echo "No-op Resume Game host action returned" >&2
     exit 1
@@ -132,6 +153,8 @@ fi
 rg -Fq 'guard rootName.contains("SDL") else { return }' Sources/UT99Host/GameViewController.swift
 rg -Fq 'SettingsKey.audioEnabled: true' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SettingsKey.audioDefaultMigration' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq '#if targetEnvironment(simulator)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'let audioEnabled = !safeMode && CommandLine.arguments.contains("-UT99AudioEnabled")' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'title.text = "Controls & Display"' Sources/UT99Host/GameViewController.swift
 rg -Fq 'touchSettingsRow(title: "Size", control: size)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'touchSettingsRow(title: "Look sensitivity", control: lookSensitivity)' Sources/UT99Host/GameViewController.swift
@@ -154,6 +177,7 @@ rg -Fq 'private final class UT99GameSurfaceInputView: UIView' Sources/UT99Host/G
 rg -Fq 'location: self.rendererPoint(fromHostPoint: location)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'gameSurfaceInputView.onLook' Sources/UT99Host/GameViewController.swift
 rg -Fq '@objc private func pointerHovered' Sources/UT99Host/GameViewController.swift
+rg -Fq 'onPointer?(location, nil, true)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'inputMode == .gameplayLook && location.x < bounds.midX' Sources/UT99Host/GameViewController.swift
 rg -Fq 'onLook?(value, true)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'touchOverlay.setMenuInteractionActive(active)' Sources/UT99Host/GameViewController.swift
@@ -166,6 +190,12 @@ fi
 rg -Fq 'engineBridge.publishMenuCursorClick(pressed: pressed)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'prepareControllerFromActiveEvent()' Sources/UT99Host/GameViewController.swift
 rg -Fq 'configureAvailableControllers(reason: "active responder event")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private var activeControllerFallbackPresses: [ObjectIdentifier: UIPress.PressType] = [:]' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let nativeControllerOwnedEvent = configuredExtendedControllerIsPresent()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'if nativeControllerOwnedEvent { return true }' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 controller responder fallback suppressed' Sources/UT99Host/GameViewController.swift
+rg -Fq 'activeControllerFallbackPresses[ObjectIdentifier(press)] = press.type' Sources/UT99Host/GameViewController.swift
+rg -Fq 'activeControllerFallbackPresses.removeValue(forKey: identifier)' Sources/UT99Host/GameViewController.swift
 rg -Fq '<key>ProfileName</key><string>ExtendedGamepad</string>' Sources/UT99Host/Info.plist
 rg -Fq 'final class GameViewController: GCEventViewController' Sources/UT99Host/GameViewController.swift
 rg -Fq 'controllerUserInteractionEnabled = false' Sources/UT99Host/GameViewController.swift
@@ -174,6 +204,9 @@ rg -Fq 'self.controllerUserInteractionEnabled = NO' third_party/patches/sdl2-ut9
 rg -Fq 'window.rootViewController = GameViewController()' Sources/UT99Host/SceneDelegate.swift
 rg -Fq 'subview !== gameSurfaceInputView' Sources/UT99Host/GameViewController.swift
 rg -Fq 'subview !== touchSettingsPanel' Sources/UT99Host/GameViewController.swift
+rg -Fq 'subview !== touchSettingsPanel && subview !== menuKeyboardPanel' Sources/UT99Host/GameViewController.swift
+rg -Fq 'if let menuKeyboardPanel { view.bringSubviewToFront(menuKeyboardPanel) }' Sources/UT99Host/GameViewController.swift
+rg -Fq 'self.presentSDLWindowIfAvailable()' Sources/UT99Host/GameViewController.swift
 rg -Fq 'gameSurfaceInputView.isHidden = false' Sources/UT99Host/GameViewController.swift
 rg -Fq 'UITouch.TouchType.indirectPointer.rawValue' Sources/UT99Host/GameViewController.swift
 rg -Fq '@objc private func pointerPressed' Sources/UT99Host/GameViewController.swift
@@ -186,7 +219,7 @@ rg -Fq 'SDL_UT99SendMousePointer' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_UT99SendMousePointer' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'mouse->last_x = window->w * 4' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'anchor ? 1 : 0' Sources/UT99Host/UT99EngineBridge.swift
-rg -Fq 'if pressed != nil || anchor {' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'if pressed != nil || edgeSample {' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'onPointer?(location, true, false)' Sources/UT99Host/GameViewController.swift
 if rg -Fq 'onPointer?(location, true, true)' Sources/UT99Host/GameViewController.swift; then
     echo "Direct touch must not hold UWindow's mouse button while the finger travels" >&2
@@ -236,7 +269,88 @@ rg -Fq '.union(["move", "menuSelect", "menuBack"])' Sources/UT99Host/UT99TouchPr
 rg -Fq 'func publishTextEntry(_ text: String)' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'engineBridge.publishTextEntry(key.characters)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'SDL_UT99SendKeyboardText' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'for character in text {' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'let result = String(character).withCString { sendText($0) }' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'SDL_EventState(SDL_TEXTINPUT, SDL_ENABLE)' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'SDL_SendKeyboardKeyInternal(KEYBOARD_VIRTUAL, SDL_PRESSED, code, SDLK_UNKNOWN);' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'posted = SDL_SendKeyboardText(text);' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'SDL_SendKeyboardKeyInternal(KEYBOARD_VIRTUAL, SDL_RELEASED, code, SDLK_UNKNOWN);' third_party/patches/sdl2-ut99-ios.patch
+keyboard_text_body="$(sed -n '/DECLSPEC int SDLCALL SDL_UT99SendKeyboardText/,/DECLSPEC int SDLCALL SDL_UT99SendHardwareKey/p' third_party/patches/sdl2-ut99-ios.patch)"
+keyboard_down_line="$(printf '%s\n' "$keyboard_text_body" | rg -n -F 'SDL_SendKeyboardKeyInternal(KEYBOARD_VIRTUAL, SDL_PRESSED, code, SDLK_UNKNOWN);' | cut -d: -f1)"
+keyboard_text_line="$(printf '%s\n' "$keyboard_text_body" | rg -n -F 'posted = SDL_SendKeyboardText(text);' | cut -d: -f1)"
+keyboard_up_line="$(printf '%s\n' "$keyboard_text_body" | rg -n -F 'SDL_SendKeyboardKeyInternal(KEYBOARD_VIRTUAL, SDL_RELEASED, code, SDLK_UNKNOWN);' | cut -d: -f1)"
+if (( keyboard_down_line >= keyboard_text_line || keyboard_text_line >= keyboard_up_line )); then
+    echo "UWindow printable input must remain KeyDown -> TextInput -> KeyUp" >&2
+    exit 1
+fi
+rg -Fq 'UT99KeyboardBridge dequeue type=text' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'UT99KeyboardBridge dequeue type=%s' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'SDL_ut99_input_dequeue_log_budget = 256' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq 'private func claimKeyboardResponder(reason: String)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99KeyboardBridge responder reason=%@ accepted=%@ first=%@ keyWindow=%@' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 touch text keyboard presented mode=host-panel' Sources/UT99Host/GameViewController.swift
+rg -Fq 'CommandLine.arguments.contains("-UT99MenuKeyboardAcceptance")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'engineBridge.runPlayerNameNavigationSmokeTest()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 player-name acceptance target=Name route=production-text accepted=%@' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'private var menuKeyboardPanel: UIVisualEffectView?' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private func menuKeyboardKey' Sources/UT99Host/GameViewController.swift
+rg -Fq 'engineBridge.publishMenuBackspace()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'engineBridge.publishMenuReturn()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'engineBridge.publishMenuCharacter(text)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'engineBridge.publishMenuCharacter(" ")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'func publishMenuCharacter(_ text: String) -> Bool' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'let accepted = publishTextEntry(text)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'UT99KeyboardBridge menu character characters=%lu route=text accepted=%@' Sources/UT99Host/UT99EngineBridge.swift
+if rg -Fq 'dlsym(handle, "_ZN7UEngine3KeyEP9UViewport9EInputKey")' Sources/UT99Host/UT99EngineBridge.swift; then
+    echo "Rejected direct UEngine::Key software-keyboard experiment returned" >&2
+    exit 1
+fi
+if rg -Fq 'SDL_UT99SendSoftwareText' Sources/UT99Host/UT99EngineBridge.swift third_party/patches/sdl2-ut99-ios.patch; then
+    echo "Rejected Unicode-plus-text software-keyboard path returned" >&2
+    exit 1
+fi
+if rg -Fq 'Thread.sleep(forTimeInterval: 0.055)' Sources/UT99Host/UT99EngineBridge.swift; then
+    echo "Rejected synthetic keyboard timing experiment returned" >&2
+    exit 1
+fi
+rg -Fq 'engineBridge.publishMenuCursor(vector, active: magnitude > 0)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'touchOverlay.onMenuCursorNudge' Sources/UT99Host/GameViewController.swift
+rg -Fq 'func nudgeMenuCursor(by offset: CGPoint)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'menuCursorNudgeAccessibilityAction(name: "Nudge down"' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'UT99 controller fallback cursor vector=' Sources/UT99Host/GameViewController.swift
+rg -Fq 'reason=ambiguous-sticks' Sources/UT99Host/GameViewController.swift
+rg -Fq 'prepareResponderFallbackGameplay()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'controller responder fallback gameplay protected touch=true' Sources/UT99Host/GameViewController.swift
+fallback_body="$(sed -n '/private func publishControllerFallbackPress/,/private func updateControllerFallbackMenuCursor/p' Sources/UT99Host/GameViewController.swift)"
+if printf '%s\n' "$fallback_body" | rg -q 'toggleInputModeFromController\(|publishTouchAction\(\.(jump|crouch|primaryFire|alternateFire)'; then
+    echo "Responder-only controller input must remain menu-only" >&2
+    exit 1
+fi
+printf '%s\n' "$fallback_body" | rg -Fq 'controller fallback mode switch ignored reason=responder-only'
+rg -Fq 'UT99 controller probe armed engineStarted=false' Sources/UT99Host/GameViewController.swift
+rg -Fq 'CONTROLLER PROBE · extended profile ready' Sources/UT99Host/GameViewController.swift
+rg -Fq 'extendedControllerConnected' Sources/UT99Host/GameViewController.swift
+rg -Fq 'responderFallback=%@' Sources/UT99Host/GameViewController.swift
+rg -Fq 'pointerMode=%@ pointerSurface=%@' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UT99 controller sample kind=%@' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Controller: discovered=\(controllers.count) extended=\(extendedControllers.count)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Pointer: owner=host-uikit mode=' Sources/UT99Host/GameViewController.swift
+rg -Fq 'clearControllerFallbackPresses(reason: "release-gameplay-inputs", rearmMenuCursor: false)' Sources/UT99Host/GameViewController.swift
+if rg -Fq 'UT99KeyboardBridge text=%@' Sources/UT99Host/GameViewController.swift; then
+    echo "Raw text must not be written to diagnostics" >&2
+    exit 1
+fi
+if rg -Fq 'let controllerConnected = controllerFallbackConnected ||' Sources/UT99Host/GameViewController.swift; then
+    echo "Responder-only controller fallback must not auto-hide complete touch controls" >&2
+    exit 1
+fi
+if rg -Fq 'menuTextField.becomeFirstResponder()' Sources/UT99Host/GameViewController.swift; then
+    echo "Open Keyboard must not depend on deferred iPadOS keyboard presentation" >&2
+    exit 1
+fi
 rg -Fq 'SDL_UT99SendHardwareKey' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'UT99 pointer owner=host-uikit sdl-gcmouse=disabled' third_party/patches/sdl2-ut99-ios.patch
+rg -Fq "Registering SDL's GCMouse handlers as a second producer" third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'DECLSPEC int SDLCALL SDL_UT99SendKeyboardText' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'DECLSPEC int SDLCALL SDL_UT99SendHardwareKey' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'private func pushHardwareKey(usage: Int, key: Int32, pressed: Bool)' Sources/UT99Host/UT99EngineBridge.swift
@@ -246,6 +360,9 @@ rg -Fq 'self?.toggleInputModeFromController()' Sources/UT99Host/GameViewControll
 rg -Fq 'UT99TouchInputTuning.controllerMovement' Sources/UT99Host/GameViewController.swift
 rg -Fq 'UT99TouchInputTuning.controllerMenuCursor' Sources/UT99Host/GameViewController.swift
 rg -Fq 'phoneDefaultPlacements' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq 'tabletDefaultPlacements' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq '"menuBack": .init(x: 0.9300878477306003, y: 0.53955078125, scale: 1)' Sources/UT99Host/GoldenPadTouchOverlay.swift
+rg -Fq '"menuSelect": .init(x: 0.8814055636896047, y: 0.63525390625, scale: 1)' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'currentRendererViewportFrame()' Sources/UT99Host/GameViewController.swift
 rg -Fq 'engineBridge.updateMenuCursorCanvasSize(rendererFrame.size)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'for name in ["User.ini", "UnrealTournament.ini"]' Sources/UT99Host/GameViewController.swift

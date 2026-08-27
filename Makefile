@@ -41,10 +41,10 @@ sdl2-ios: prepare-sdl2-source
 	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme xcFramework-iOS -configuration Release -derivedDataPath build/sdl2-xcframework CODE_SIGNING_ALLOWED=NO build
 
 sdl2-shared-ios: prepare-sdl2-source
-	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphoneos -configuration Release -derivedDataPath build/sdl2-shared-ios CODE_SIGNING_ALLOWED=NO OTHER_CFLAGS='$$(inherited) -ffile-prefix-map=$(realpath build)=build' OTHER_CPLUSPLUSFLAGS='$$(inherited) -ffile-prefix-map=$(realpath build)=build' build
+	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphoneos -configuration Release -derivedDataPath build/sdl2-shared-ios CODE_SIGNING_ALLOWED=NO EXCLUDED_SOURCE_FILE_NAMES=SDL_shaders_metal.metal OTHER_CFLAGS='$$(inherited) -ffile-prefix-map=$(realpath build)=build' OTHER_CPLUSPLUSFLAGS='$$(inherited) -ffile-prefix-map=$(realpath build)=build' build
 
 sdl2-shared-sim-ios: prepare-sdl2-source
-	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphonesimulator -configuration Release -derivedDataPath build/sdl2-shared-sim-ios CODE_SIGNING_ALLOWED=NO build
+	@xcodebuild -project build/sources/SDL2-UT99/Xcode/SDL/SDL.xcodeproj -scheme 'Shared Library-iOS' -sdk iphonesimulator -configuration Release -derivedDataPath build/sdl2-shared-sim-ios CODE_SIGNING_ALLOWED=NO EXCLUDED_SOURCE_FILE_NAMES=SDL_shaders_metal.metal build
 
 ios-audio-deps:
 	@./tools/build_ios_dependencies.sh

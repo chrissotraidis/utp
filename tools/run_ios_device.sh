@@ -63,6 +63,14 @@ make ios-engine-real-artifact
 
 derived_data="build/ios-device-app"
 app="$derived_data/Build/Products/Debug-iphoneos/UT99Apple.app"
+xcode_actions=(build)
+# The runtime embed phase refreshes dylibs on every invocation. An incremental
+# install can otherwise leave Xcode's previously sealed outer app signature
+# around those newly signed frameworks. Clean install/run products so the
+# final app seal is always generated after embedding.
+if [[ "$mode" == "--install" || "$mode" == "--run" ]]; then
+  xcode_actions=(clean build)
+fi
 UT99_ENGINE_EMBED=1 xcodebuild \
   -project UT99Apple.xcodeproj \
   -scheme UT99Apple \
@@ -74,7 +82,7 @@ UT99_ENGINE_EMBED=1 xcodebuild \
   CODE_SIGNING_ALLOWED=YES \
   CODE_SIGN_STYLE=Automatic \
   DEVELOPMENT_TEAM="$team" \
-  build
+  "${xcode_actions[@]}"
 
 ./tools/verify_ios_package.sh "$app"
 echo "device_build=$app"
