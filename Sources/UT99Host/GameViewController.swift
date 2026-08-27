@@ -223,6 +223,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var wasExtendedControllerConnected = false
     private var controllerFallbackConnected = false
     private var attemptedHotControllerDiscovery = false
+    private var controllerDiscoveryGeneration = 0
     private var menuSelectPressed = false
     private var hardwareTextKeyUsages: Set<Int> = []
     private var activeControllerFallbackPresses: [ObjectIdentifier: UIPress.PressType] = [:]
@@ -542,14 +543,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         }
         guard !attemptedHotControllerDiscovery else { return false }
         attemptedHotControllerDiscovery = true
-        GCController.startWirelessControllerDiscovery { [weak self] in
-            guard let self else { return }
-            let found = self.configureAvailableControllers(reason: "hot discovery completion")
-            if found {
-                self.controllerFallbackConnected = false
-                DispatchQueue.main.async { [weak self] in self?.updateTouchVisibility() }
-            }
-        }
+        restartControllerDiscovery(reason: "active responder event")
         return false
     }
 
@@ -1060,8 +1054,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self?.engineBridge.releaseControllerLook()
             NSLog("UT99 controller disconnected: %@", controller?.vendorName ?? "unknown")
             DispatchQueue.main.async { [weak self] in
-                self?.clearControllerFallbackPresses(reason: "controller-disconnect", rearmMenuCursor: true)
-                self?.updateTouchVisibility()
+                guard let self else { return }
+                self.clearControllerFallbackPresses(reason: "controller-disconnect", rearmMenuCursor: true)
+                let remainingController = self.configureAvailableControllers(
+                    reason: "controller disconnect reconciliation"
+                )
+                if !remainingController {
+                    self.restartControllerDiscovery(reason: "controller disconnected")
+                }
+                self.updateTouchVisibility()
             }
         })
         appleIntegrationObservers.append(center.addObserver(
@@ -1092,7 +1093,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             }
             guard let self else { return }
             self.reassertControllerEventRouting()
-            _ = self.configureAvailableControllers(reason: "application became active")
+            let foundController = self.configureAvailableControllers(reason: "application became active")
+            if !foundController {
+                // Wireless discovery is finite. A player can leave UTP for
+                // Bluetooth Settings after launch and return after the initial
+                // discovery window has expired, so begin a fresh window and
+                // reconcile the profile on the same main-run-loop path that
+                // configures controllers present at cold launch.
+                self.restartControllerDiscovery(reason: "application became active")
+            }
             self.updateTouchVisibility()
             self.activateGameAudioSession()
             self.presentSDLWindowIfAvailable()
@@ -1152,8 +1161,80 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         }
         startControllerMonitor()
         updateTouchVisibility()
-        GCController.startWirelessControllerDiscovery { NSLog("UT99 controller discovery finished") }
+        if !controllerPresentAtLaunch {
+            restartControllerDiscovery(reason: "initial integration")
+        }
         activateGameAudioSession()
+    }
+
+    private func restartControllerDiscovery(reason: String) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.restartControllerDiscovery(reason: reason)
+            }
+            return
+        }
+
+        controllerDiscoveryGeneration += 1
+        let generation = controllerDiscoveryGeneration
+        GCController.stopWirelessControllerDiscovery()
+        NSLog("UT99 controller discovery restarted reason=%@ generation=%ld",
+              reason, generation)
+        GCController.startWirelessControllerDiscovery { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.controllerDiscoveryGeneration == generation else { return }
+                let found = self.configureAvailableControllers(
+                    reason: "\(reason) discovery completion"
+                )
+                if found {
+                    self.adoptDiscoveredController(
+                        reason: "\(reason) discovery completion",
+                        generation: generation
+                    )
+                } else {
+                    self.attemptedHotControllerDiscovery = false
+                    NSLog("UT99 controller discovery finished reason=%@ generation=%ld extended=false",
+                          reason, generation)
+                }
+            }
+        }
+
+        // A Bluetooth controller can become visible to GameController shortly
+        // after the app returns to the foreground rather than synchronously in
+        // didBecomeActive. Retry on the main run loop, where the cold-launch
+        // enumeration path is already physically accepted.
+        let retryDelays: [TimeInterval] = [0.15, 0.4, 0.9, 1.8, 3.5, 6.0]
+        for (index, delay) in retryDelays.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.controllerDiscoveryGeneration == generation else { return }
+                let attempt = index + 1
+                let found = self.configureAvailableControllers(
+                    reason: "\(reason) retry \(attempt)"
+                )
+                if found {
+                    self.adoptDiscoveredController(
+                        reason: "\(reason) retry \(attempt)",
+                        generation: generation
+                    )
+                } else if attempt == retryDelays.count {
+                    self.attemptedHotControllerDiscovery = false
+                    NSLog("UT99 controller discovery retries exhausted reason=%@ generation=%ld",
+                          reason, generation)
+                }
+            }
+        }
+    }
+
+    private func adoptDiscoveredController(reason: String, generation: Int) {
+        guard controllerDiscoveryGeneration == generation else { return }
+        controllerFallbackConnected = false
+        attemptedHotControllerDiscovery = false
+        clearControllerFallbackPresses(reason: "extended-controller-adopted", rearmMenuCursor: true)
+        updateTouchVisibility()
+        GCController.stopWirelessControllerDiscovery()
+        controllerDiscoveryGeneration += 1
+        NSLog("UT99 controller discovery adopted reason=%@ generation=%ld",
+              reason, generation)
     }
 
     private func scheduleControllerLifecycleSmokeTest() {
@@ -1166,6 +1247,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 NSLog("UT99 controller lifecycle smoke main-queue=alive")
+                self.restartControllerDiscovery(reason: "controller lifecycle smoke")
                 let configuration = GCVirtualController.Configuration()
                 configuration.elements = [
                     GCInputLeftThumbstick,
@@ -3584,6 +3666,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private func diagnosticLogURLs(at supportRoot: URL) -> [URL] {
         [
             supportRoot.appendingPathComponent("UT99-engine.stdout"),
+            supportRoot.appendingPathComponent("UT99-engine.previous.stdout"),
             supportRoot.appendingPathComponent("UnrealTournament.log"),
             supportRoot.appendingPathComponent("UT99-touch-smoke.log"),
             supportRoot.appendingPathComponent("UT99-performance.log"),

@@ -335,6 +335,11 @@ if rg -Fq 'DispatchQueue.main.async(execute: invoke)' Sources/UT99Host/UT99Engin
 fi
 rg -Fq 'UT99 controller lifecycle smoke main-queue=alive' Sources/UT99Host/GameViewController.swift
 rg -Fq 'GCVirtualController(configuration: configuration)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'restartControllerDiscovery(reason: "controller lifecycle smoke")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'restartControllerDiscovery(reason: "application became active")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let retryDelays: [TimeInterval] = [0.15, 0.4, 0.9, 1.8, 3.5, 6.0]' Sources/UT99Host/GameViewController.swift
+rg -Fq 'supportRoot.appendingPathComponent("UT99-engine.previous.stdout")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'previousSession.suffix(Self.previousEngineLogLimit)' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'CONTROLLER PROBE · extended profile ready' Sources/UT99Host/GameViewController.swift
 rg -Fq 'extendedControllerConnected' Sources/UT99Host/GameViewController.swift
 rg -Fq 'responderFallback=%@' Sources/UT99Host/GameViewController.swift

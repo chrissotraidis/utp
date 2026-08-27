@@ -14,18 +14,21 @@ not proof that a build satisfies it.
   [`evidence/engine-startup/2026-08-26-input-rejection/RESULT.md`](evidence/engine-startup/2026-08-26-input-rejection/RESULT.md)
 - Accepted keyboard result:
   [`evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md)
+- Foreground discovery follow-up:
+  [`evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md`](evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md)
 - Installed controller candidate:
   `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
 - Installed executable UUID: `0B4958D1-0EC7-3408-A82A-9D10F215031D`
 - Installed executable SHA-256:
   `7cf5c81c240f0f7f29a094178572e7e8d9b78fe8d134965e710590de2351354d`
 
-The controller candidate was installed in place without changing the data
+The `d10f613` controller candidate was installed in place without changing the data
 container; preferences and both UT INI files are byte-identical before and
 after installation. Hardware and host software keyboard entry were physically
 accepted on the frozen 2026-08-27 baseline, and the candidate passes the same
-real-engine `Ab 9` regression locally. Controller hot-connect and reconnect
-remain physically open. No later worktree edit may be called physically
+real-engine `Ab 9` regression locally. Physical testing rejected its Xbox
+hot-connect path while reconfirming controller-at-launch menu and gameplay.
+No later worktree edit may be called physically
 accepted merely because it builds or passes a Simulator probe.
 
 The installed candidate contains responder-only controller containment. Its
@@ -199,6 +202,13 @@ rebuild, reinstall, or repeat a failed gesture.
   Host SHA-256: `7cf5c81c240f0f7f29a094178572e7e8d9b78fe8d134965e710590de2351354d`.
   SDL patch SHA-256 remains
   `68a1ce30d1e8808e7a928269bfc2133c2ea17e6e8ac75b22fb3f07dace2244e2`.
+- Physical result: rejected for connecting through Bluetooth Settings after
+  Unreal was already running. Ending and reopening UTP with the controller
+  connected restored full menu and Oblivion gameplay control.
+- The failed process log was erased by the subsequent engine launch. The next
+  follow-up rotates the bounded previous engine log and restarts finite
+  wireless discovery plus main-run-loop reconciliation after UTP becomes
+  active again.
 
 ## Physical keyboard acceptance, 2026-08-27
 

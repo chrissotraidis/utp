@@ -69,6 +69,16 @@ returned to Menu, and disconnected cleanly. The `Ab 9` Player Name regression
 then passed unchanged. Physical Xbox hot-connect/disconnect remains the sole
 acceptance boundary for this slice.
 
+Physical testing rejected that lifecycle candidate: connecting through
+Bluetooth Settings after Unreal had started still produced unusable control,
+while reopening UTP with the already-connected controller restored full menu
+and Oblivion gameplay input. Main-run-loop entry was therefore not a complete
+hot-connect repair. The shipped GameController interface documents wireless
+discovery as a finite operation; UTP started it only at launch. The next narrow
+follow-up restarts discovery after returning from Settings, performs bounded
+main-run-loop reconciliation, and retains the previous session log across one
+restart.
+
 The same candidate also contains a narrow recovery presentation repair. The
 dedicated iPad Simulator reproduced the blank landing screen after choosing
 **Not Now** from **Previous Session Interrupted**. Refreshing the onboarding

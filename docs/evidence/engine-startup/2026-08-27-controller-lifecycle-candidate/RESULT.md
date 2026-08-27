@@ -2,8 +2,9 @@
 
 ## Outcome
 
-The controller lifecycle repair is **accepted locally** and still requires one
-focused physical-iPad hot-connect/disconnect check.
+The controller lifecycle repair passed locally but was **rejected on the
+physical iPad** for hot-connect. Controller-at-launch menu and gameplay remain
+accepted.
 
 The physically accepted keyboard baseline is commit `db4e8d1`. The controller
 candidate is a separate three-file implementation/test diff. It does not alter
@@ -75,7 +76,7 @@ was written to the log.
 - SDL patch SHA-256:
   `68a1ce30d1e8808e7a928269bfc2133c2ea17e6e8ac75b22fb3f07dace2244e2`
 
-## Physical acceptance boundary
+## Physical result
 
 The candidate was installed in place after preserving preferences, `User.ini`,
 and `UnrealTournament.ini`. Post-install copies of all three files are
@@ -86,8 +87,20 @@ byte-identical. Their SHA-256 values are, respectively:
   and
 - `43a8ae5c33d00d4d572eb4852e462d567b612b08c45db2888e7f75bbe80b2809`.
 
-Perform one short sequence: launch without the Xbox controller, hot-connect it
-at the original menu, confirm extended menu input, switch to Gameplay and
-confirm both sticks/right trigger, disconnect and confirm touch returns, then
-reconnect once in Gameplay. Stop immediately if the log reports responder-only
-input rather than an extended profile.
+The user launched without the Xbox controller, chose **Try Normal Start**,
+reached the original menu, connected the controller through Bluetooth Settings,
+returned to UTP, and found the controller unusable. After ending and reopening
+UTP with the same controller already connected, menu control worked. The user
+entered Oblivion, switched to Gameplay controls, and confirmed that gameplay
+worked well.
+
+Restarting UTP reset `UT99-engine.stdout`, so the failed hot-connect process was
+not retained. The pulled replacement session proves the accepted-at-launch
+boundary: it contains a real extended Xbox profile, independent left/right
+stick samples, button and right-trigger actions, mode switching, and suppression
+of duplicate responder presses. It cannot prove what profile the preceding
+failed process published.
+
+This rejects the claim that main-run-loop engine scheduling alone repairs
+physical hot-connect. The next candidate must preserve the previous session log
+and restart finite wireless discovery after returning from Bluetooth Settings.

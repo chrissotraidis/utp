@@ -8,6 +8,8 @@ import UIKit
 /// uses JIT, and it does not report success unless dyld actually loads the
 /// build-time transformed image.
 final class UT99EngineBridge {
+    private static let previousEngineLogLimit = 512 * 1024
+
     private enum SettingsKey {
         static let lookSensitivity = "ut99.input.lookSensitivity"
         static let invertLookY = "ut99.input.invertLookY"
@@ -189,9 +191,15 @@ final class UT99EngineBridge {
         }
         NSLog("UT99EngineBridge engine cwd changed=%@ path=%@ actual=%@ iniReadable=%@", changedDirectory.description, systemRoot.path, cwd, iniReadable ? "true" : "false")
         let stdoutURL = supportRoot.appendingPathComponent("UT99-engine.stdout")
+        let previousStdoutURL = supportRoot.appendingPathComponent("UT99-engine.previous.stdout")
         // One engine defect must not consume the player's storage forever.
-        // Diagnostics are session-scoped, so reset the redirected log before
-        // each launch instead of appending unbounded per-frame messages.
+        // Preserve only the tail of the immediately previous session before
+        // resetting the redirected log. A restart after a controller failure
+        // must not erase the evidence needed to diagnose that failure.
+        if let previousSession = try? Data(contentsOf: stdoutURL), !previousSession.isEmpty {
+            let boundedPrevious = Data(previousSession.suffix(Self.previousEngineLogLimit))
+            try? boundedPrevious.write(to: previousStdoutURL, options: .atomic)
+        }
         try? Data().write(to: stdoutURL, options: .atomic)
         freopen(stdoutURL.path, "a", stdout)
         freopen(stdoutURL.path, "a", stderr)
