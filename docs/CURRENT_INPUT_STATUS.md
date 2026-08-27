@@ -16,6 +16,8 @@ not proof that a build satisfies it.
   [`evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md)
 - Foreground discovery follow-up:
   [`evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md`](evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md)
+- Accepted controller hot-connect result:
+  [`evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md)
 - Installed foreground-discovery candidate:
   `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
 - Installed executable UUID: `F97BE745-DD6D-3F98-AD4A-A3996D7F42C5`
@@ -25,12 +27,12 @@ not proof that a build satisfies it.
 The `097a630` foreground-discovery candidate was installed in place without
 changing the data container; preferences and both UT INI files are
 byte-identical before and after installation. Hardware and host software
-keyboard entry were physically accepted on the frozen 2026-08-27 baseline, and
-the candidate passes the same real-engine `Ab 9` regression locally. Its
-predecessor `d10f613` was physically rejected for Xbox hot-connect while
-reconfirming controller-at-launch menu and gameplay. No later worktree edit may
-be called physically accepted merely because it builds or passes a Simulator
-probe.
+keyboard entry remain physically accepted. On 2026-08-27, the user also
+physically accepted Xbox hot-connect from Bluetooth Settings, original-menu
+navigation, mode switching, Oblivion movement/look/fire, and pause/resume on
+this exact candidate. Its predecessor `d10f613` remains a documented rejected
+build. No later worktree edit may be called physically accepted merely because
+it builds or passes a Simulator probe.
 
 The installed candidate contains responder-only controller containment. Its
 host and physical printable keys share the accepted KeyDown, TextInput, KeyUp
@@ -53,6 +55,7 @@ absent.
 | Touch menu cursor, SELECT, and BACK | Accepted | The touch trackball/menu path is usable. Saved control placement must be preserved; it is not evidence that fresh-install defaults match the current iPad layout. |
 | Touch gameplay movement, look, and actions | Accepted | Offline gameplay works through the gameplay touch layout. |
 | Xbox controller already connected before UTP launches | Accepted | The relaunch log reports `Detected 2 joysticks` and an Xbox extended profile. Physical menu navigation and gameplay were reported working. |
+| Xbox controller connected after UT is already running | Accepted on 2026-08-27 | Connecting through Bluetooth Settings published an Xbox extended profile. UTP adopted it, hid touch controls, navigated the original menu, switched to Gameplay, and delivered movement, look, and fire in Oblivion. Pause/resume also remained usable. |
 | Physical keyboard Player Name entry | Accepted on 2026-08-27 | The attached iPad keyboard deleted and entered printable characters in the real Player Name field. The matching log records UIKit responder callbacks and the required KeyDown, TextInput, KeyUp dequeue order. |
 | In-host keyboard presentation and entry | Accepted on 2026-08-27 | Open/Close presentation, sizing, Delete, uppercase and lowercase printable entry all worked in the real Player Name field. |
 | Diagnostic ZIP and issue-report actions | Accepted | The modal-free export writes the bounded ZIP into the Files-visible UTP Documents folder without freezing the engine. |
@@ -63,9 +66,7 @@ absent.
 | Behavior | Status | Current diagnosis |
 | --- | --- | --- |
 | In-host software keyboard letters and numbers | Accepted on the current installed build | The corrected KeyDown, TextInput, KeyUp sequence visibly edited Player Name on the physical iPad. The privacy-safe device log confirms the same ordered dequeue sequence for the accepted host-key taps. |
-| Xbox controller connected after UT is already running | Rejected with root boundary confirmed | The first live controller edge found zero `GCController` objects and zero extended profiles. Only collapsed `UIPress` responder events appeared; no independent sticks or triggers existed. Full gameplay cannot be synthesized from that representation. |
-| Touch fallback after failed controller hot-connect | Rejected mixed-mode behavior | Touch correctly remained visible without an extended profile, but a responder `playPause` edge switched the internal state to Menu while the gameplay overlay remained visible. Touch routing and its visual layout diverged. |
-| Physical trackpad pointer | Rejected on the installed build; candidate locally isolated | The candidate keeps host UIKit as the sole pointer producer and disables SDL `GCMouse` initialization. It adds no new scale or affine correction. The live engine logs `pointer owner=host-uikit sdl-gcmouse=disabled` with correct 1366x1024 point and 2732x2048 pixel geometry. Four-edge alignment and one stock click remain physical checks. |
+| Physical trackpad pointer | Functional but precision is open | The current physical run found the trackpad usable but imprecise or strange. Host UIKit is the sole pointer producer and SDL `GCMouse` is disabled to prevent duplicate motion/clicks. Four-edge alignment, small-target selection, secondary click, and wheel behavior are not accepted. |
 | Launch curtain and crash-recovery dismissal | Simulator-accepted; physical remains open | The exact blank landing panel after recovery **Not Now** was reproduced in the dedicated iPad Simulator. A deferred panel refresh after alert dismissal now restores the complete Ready card. The same cold-relaunch recovery path passed twice in Simulator; the candidate has not been installed on iPad. |
 | Multiplayer **Press Escape to begin** transition | Open | Escape delivery and the original download/connection state have not been separated. Do not change the prompt or input mapping without a timestamped reproduction. |
 | Fresh-install iPad SELECT/BACK defaults | Open | The user's saved layout is usable, but the currently preferred physical positions must be captured before changing defaults. Never overwrite an existing saved layout to test this. |
@@ -93,16 +94,13 @@ and attributed correctly. They cannot prove that an opaque original UWindow
 field visibly changed, that the stock cursor visually aligns with the iPad
 pointer, or that iPadOS published a hot-connected controller profile.
 
-## The only two input observations still needed
+## Remaining focused input observation
 
-Physical work is limited to these short yes/no observations:
-
-1. **Controller publication:** after a lifecycle-level repair candidate exists,
-   hot-connect the Xbox controller once and confirm that the log reports a real
-   extended profile before moving both sticks and a trigger. Do not retest full
-   gameplay while the app reports responder-only input.
-2. **Physical pointer:** move to the four display edges and select one stock
-   submenu with the physical trackpad.
+Controller publication, hot-connect, original-menu navigation, gameplay, mode
+switching, and pause/resume are physically accepted. The remaining narrow input
+observation is **physical pointer precision**: move to the four display edges,
+select a small stock submenu target, and separately check primary click,
+secondary click, and wheel/scroll behavior.
 
 Codex will mirror and record the iPad, watch the result, collect timestamps, and
 correlate the logs. The user should not need to narrate the bug, export logs,
@@ -133,7 +131,8 @@ rebuild, reinstall, or repeat a failed gesture.
 - That matching device build was physically rejected for software text,
   physical-keyboard recovery, controller hot-connect, and Menu/Gameplay state
   consistency. The later keyboard follow-up described below was installed and
-  physically accepted; controller lifecycle remains open.
+  physically accepted; the later `097a630` foreground-discovery candidate also
+  physically closes controller hot-connect.
 
 ## Local candidate evidence, 2026-08-27
 
@@ -211,6 +210,22 @@ rebuild, reinstall, or repeat a failed gesture.
   wireless discovery plus main-run-loop reconciliation after UTP becomes
   active again.
 
+## Physical controller hot-connect acceptance, 2026-08-27
+
+- The accepted installed candidate is `097a630`, host UUID
+  `F97BE745-DD6D-3F98-AD4A-A3996D7F42C5`.
+- The user launched without the Xbox controller, entered the original UT menu,
+  connected the controller through Bluetooth Settings, and returned to UTP.
+- The live log records the Xbox extended profile being configured and becoming
+  current, followed by automatic touch-overlay hiding.
+- The user physically confirmed original-menu control, Player Name keyboard
+  regression, Oblivion gameplay movement/look/fire after switching modes, and
+  pause/resume.
+- This closes the controller publication and hot-connect repair for the
+  accepted candidate. Pointer precision and renderer defects remain separate.
+- Full evidence is recorded in
+  [`evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md).
+
 ## Physical keyboard acceptance, 2026-08-27
 
 - The installed host UUID was `76FC6C39-B7E0-3AC1-AFED-0F73CFA96E40`.
@@ -235,28 +250,23 @@ rebuild, reinstall, or repeat a failed gesture.
 Identify the installed binary and matching source. Preserve the app container
 and capture the preferred saved iPad layout. No behavior changes occur here.
 
-### 1. Contain responder-only controller input
+### 1. Contain responder-only controller input — accepted
 
-The discriminator is complete: an Xbox profile present before launch works,
-while the hot-connected session produced only generic responder presses after
-engine entry. First remove responder-fallback mode switching and make that path
-explicitly menu-only. It must never hide or reroute complete touch gameplay.
+The foreground-discovery candidate now publishes and adopts the real extended
+profile after Bluetooth Settings and has passed physical menu/gameplay
+acceptance. Responder fallback remains explicitly menu-only and must never hide
+or reroute complete touch gameplay. Do not create another synthetic gameplay
+map from `UIPress`; it has no separate stick or trigger data.
 
-A full hot-connect repair belongs at the GameController/legacy-main-loop
-lifecycle boundary and is accepted only when `GCController.controllers()`
-publishes a real extended profile. Do not create another synthetic gameplay map
-from `UIPress`; it has no separate stick or trigger data.
+### 2. Software keyboard route convergence — accepted
 
-### 2. Software keyboard route convergence, isolated
+Every printable character uses one SDL helper that queues the matching virtual
+KeyDown, TextInput, then KeyUp. This ordering is required by the stock
+`UWindowEditBox` implementation and has visibly passed with both the attached
+hardware keyboard and UTP virtual keyboard on the physical iPad. Log only event
+metadata and character counts, never text.
 
-Send every printable character through one SDL helper that queues the matching
-virtual KeyDown, TextInput, then KeyUp. This ordering is required by the stock
-`UWindowEditBox` implementation and has visibly entered `Ab 9` in the real
-Player Name field in Simulator. Log only event metadata and character counts,
-never text. One short host-key and physical-key check in that same field remains
-the deciding iPad observation; queue return values alone are not acceptance.
-
-### 3. Physical pointer, isolated
+### 3. Physical pointer, isolated — next input slice
 
 Choose one pointer owner for the candidate. The first discriminator keeps the
 host UIKit pointer route and disables SDL `GCMouse` ownership; it does not add a

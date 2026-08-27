@@ -2,8 +2,8 @@
 
 ## Outcome
 
-This follow-up is **accepted locally** and requires one focused physical-iPad
-hot-connect check. It follows the physically rejected `d10f613` candidate and
+This follow-up is **physically accepted** for Xbox hot-connect on the attached
+iPad. It follows the physically rejected `d10f613` candidate and
 does not change controller mappings, touch mappings, pointer transforms, or the
 physically accepted keyboard event recipe.
 
@@ -92,12 +92,12 @@ byte-identical. Their SHA-256 values are, respectively:
   and
 - `43a8ae5c33d00d4d572eb4852e462d567b612b08c45db2888e7f75bbe80b2809`.
 
-## Remaining boundary
+## Physical acceptance
 
-Simulator discovery/adoption proves UTP's state machine, not whether iPadOS
-will publish the physical Xbox profile after returning from Settings. Perform
-only the failed sequence: launch with Xbox off, connect through Settings, return
-to the original menu, wait up to six seconds, then move the left stick and press
-A/B. If it fails, stop without restarting UTP; the retained current log will
-classify every retry and profile count. A later restart will preserve that log
-as the previous session instead of erasing it.
+The user performed the exact discriminator: launch with Xbox off, enter the
+original menu, connect through Settings, return to UTP, then use the controller
+without restarting the app. The controller navigated the menu, switched modes,
+and controlled movement/look/fire in Oblivion; pause/resume also passed. The
+pulled log records the Xbox extended profile becoming current and touch
+auto-hide before those inputs. See
+[`../2026-08-27-controller-hot-connect-acceptance/RESULT.md`](../2026-08-27-controller-hot-connect-acceptance/RESULT.md).

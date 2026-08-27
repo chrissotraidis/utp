@@ -66,8 +66,7 @@ longer occupies a serial main-dispatch block forever. A real-engine Simulator
 probe connected an extended virtual controller after engine entry, completed
 menu input, switched to Gameplay, delivered movement/look/right-trigger input,
 returned to Menu, and disconnected cleanly. The `Ab 9` Player Name regression
-then passed unchanged. Physical Xbox hot-connect/disconnect remains the sole
-acceptance boundary for this slice.
+then passed unchanged.
 
 Physical testing rejected that lifecycle candidate: connecting through
 Bluetooth Settings after Unreal had started still produced unusable control,
@@ -78,6 +77,12 @@ discovery as a finite operation; UTP started it only at launch. The next narrow
 follow-up restarts discovery after returning from Settings, performs bounded
 main-run-loop reconciliation, and retains the previous session log across one
 restart.
+
+That foreground-discovery follow-up is now physically accepted. On 2026-08-27,
+the user launched with Xbox off, connected through Bluetooth Settings after
+reaching the original menu, and then confirmed menu navigation, mode switching,
+Oblivion movement/look/fire, and pause/resume without restarting UTP. The pulled
+log confirms adoption of the real Xbox extended profile and touch auto-hide.
 
 The same candidate also contains a narrow recovery presentation repair. The
 dedicated iPad Simulator reproduced the blank landing screen after choosing
@@ -92,10 +97,10 @@ cycle pass locally. This remains distinct from physical iPad acceptance.
   software-key rejection was caused by event order inside UWindow: TextInput
   arrived after KeyUp, so `bKeyDown` was false. The accepted helper holds the
   matching key through TextInput and must remain unchanged.
-- A controller present before launch obtains an extended profile and works. In
-  the rejected hot-connect run, no `GCController` object appeared at all;
-  iPadOS exposed only generic `UIPress` values. Both sticks collapse into the
-  same directions and triggers have no stable profile in that path.
+- A controller present before launch works, and the foreground-discovery
+  follow-up now also physically passes hot-connect through Bluetooth Settings.
+  Responder-only `UIPress` input remains deliberately incapable of synthesizing
+  gameplay when no extended profile exists.
 - The rejected build could process responder `playPause` immediately while its
   deferred overlay change never ran, leaving mode and layout crossed. The
   lifecycle candidate restores main-queue progress; the post-engine Simulator
@@ -105,10 +110,9 @@ cycle pass locally. This remains distinct from physical iPad acceptance.
 - Gameplay left-stick movement is translated to digital arrow-key holds after
   fixed dead-zone and cardinal-snap thresholds; stick magnitude is not analog
   movement speed.
-- Controller reconciliation handlers exist for connect and disconnect, but the
-  rejected non-returning main-dispatch engine entry prevented those lifecycle
-  notifications from running reliably. The main-run-loop scheduling candidate
-  passes post-engine connect/disconnect locally and awaits physical acceptance.
+- Controller reconciliation now physically passes post-engine Xbox publication
+  and adoption. Disconnect/reconnect stress beyond the accepted sequence remains
+  ordinary lifecycle hardening, not a blocker for the accepted hot-connect path.
 - Touch visibility can override the pointer surface's explicit input mode,
   allowing controller and mouse/trackpad routing to disagree.
 - The multiplayer Escape failure is not yet localized between input delivery
@@ -127,10 +131,10 @@ cycle pass locally. This remains distinct from physical iPad acceptance.
    TextInput, Unicode KeyDown/KeyUp/TextInput, or direct `UEngine::Key` recipes.
    Hardware and host-key entry both passed in the real Player Name field. Treat
    this slice as frozen while controller lifecycle work proceeds.
-3. **Controller containment.** A configured extended controller owns the native
+3. **Controller containment (physical iPad accepted 2026-08-27).** A configured extended controller owns the native
    route. Responder-only input is menu-only, cannot switch mode, and cannot
-   auto-hide or reroute touch gameplay. Full hot-connect work resumes only
-   after a lifecycle change publishes an extended profile after engine entry.
+   auto-hide or reroute touch gameplay. The foreground-discovery route now
+   publishes and adopts an extended Xbox profile after engine entry.
 4. **Menu-stick response.** Use captured Xbox traces to select one radial dead
    zone, rescale after it, add small hysteresis, and tune a continuous cursor
    speed curve. Validate small targets and all four display corners.
