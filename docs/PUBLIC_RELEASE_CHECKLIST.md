@@ -56,15 +56,16 @@ Passing the source gate does not authorize or validate a public app release.
 
 ## Current blockers
 
-- Physical iPhone and iPad startup, gameplay, touch, audio, controller-at-launch,
-  and update preservation have been exercised, but Preview 1 still has the
-  input defects listed in `docs/KNOWN_ISSUES.md`.
+- Physical iPhone and iPad startup, gameplay, touch, audio, keyboard text entry,
+  Xbox controller startup/hot-connect, pause/resume, and update preservation
+  have been exercised for Preview 2. Pointer precision and the remaining
+  defects are listed in `docs/KNOWN_ISSUES.md`.
 - Transformed-runtime distribution permission is unresolved.
 - Public-binary acquisition permission is unresolved.
 - No TestFlight, App Store, or other general consumer channel is configured.
 - Formal lifecycle, networking, performance, thermal, and broad-device
   acceptance remain open.
 
-These blockers require Preview 1 to remain an explicitly unfinished,
+These blockers require Preview 2 to remain an explicitly unfinished,
 re-signable developer artifact. They prevent describing it as a finished or
 generally installable iOS release.

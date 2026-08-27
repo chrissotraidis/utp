@@ -11,7 +11,7 @@
   <img alt="iOS and iPadOS 17 or later" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-17%2B-0A84FF?logo=apple">
   <img alt="FruCoRe Metal renderer" src="https://img.shields.io/badge/renderer-FruCoRe%20Metal-5E5CE6">
   <img alt="Tested on physical iPhone and iPad" src="https://img.shields.io/badge/physical%20iPhone%20%2F%20iPad-tested-30D158">
-  <a href="https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1"><img alt="Preview 1 IPA" src="https://img.shields.io/badge/public%20IPA-Preview%201-FF9F0A"></a>
+  <a href="https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.2"><img alt="Preview 2 IPA" src="https://img.shields.io/badge/public%20IPA-Preview%202-FF9F0A"></a>
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
@@ -46,7 +46,7 @@ Those boundaries are enforced by [`make public-check`](#repository-safety).
 > [!IMPORTANT]
 > UTP builds, signs, installs, launches, and plays on physical iPhone and iPad.
 > Touch gameplay, audio, and controller play have been exercised on real
-> hardware. [Preview 1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1)
+> hardware. [Preview 2](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.2)
 > is available as an unsigned IPA that must be re-signed before installation.
 > It is a developer preview, not an App Store or TestFlight release.
 
@@ -54,11 +54,11 @@ Those boundaries are enforced by [`make public-check`](#repository-safety).
 
 | Surface | Current status | Meaning |
 |---|---|---|
-| Source repository | **Public** | Source and Preview 1 release notes are available from this repository. |
+| Source repository | **Public** | Source and Preview 2 release notes are available from this repository. |
 | Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
 | iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
-| Public IPA | **Preview 1 available** | Download the unsigned IPA from [v0.1.0-preview.1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1) and re-sign it with your own Apple account. |
-| TestFlight / App Store | **Not available** | Preview 1 is a sideloadable developer artifact, not a universal one-tap installation. |
+| Public IPA | **Preview 2 available** | Download the unsigned IPA from [v0.1.0-preview.2](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.2) and re-sign it with your own Apple account. |
+| TestFlight / App Store | **Not available** | Preview 2 is a sideloadable developer artifact, not a universal one-tap installation. |
 | App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and release operations remain open. |
 
 The authoritative gate ledger is [`docs/STATUS.md`](docs/STATUS.md). The
@@ -92,10 +92,11 @@ Current repository evidence includes:
 - a final-package iPhone Simulator session that held one engine process for
   more than 30 minutes and survived three Home/reopen cycles.
 
-The game itself works on physical iPhone and iPad. Narrower known issues and
-follow-up checks, including controller hot-connect, keyboard text entry, menu
-cursor stability, pointer calibration, UI scaling, shadow fidelity, and
-audio-route interruption, are tracked in
+The game itself works on physical iPhone and iPad. Hardware and virtual-keyboard
+text entry plus Xbox controller startup and hot-connect are physically accepted
+in Preview 2. Narrower known issues, including physical pointer precision,
+mouse buttons/wheel behavior, UI scaling, shadow fidelity, and audio-route
+interruption, are tracked in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## Getting the game files
@@ -152,10 +153,10 @@ The touch interface is designed as a full-bleed landscape overlay:
 - **Customization:** opacity, scale, handedness, visibility, drag/pinch layout
   editing, saved profiles, and restore defaults.
 
-Touch gameplay and Xbox controller play have been exercised on physical
-hardware. Native GameController, hardware-keyboard, and pointer bridges are
-included in the device target; narrower hot-connect, printable-keyboard,
-mouse-button, and pointer-calibration cases remain tracked independently.
+Touch gameplay, Xbox controller play and hot-connect, hardware-keyboard text,
+and UTP virtual-keyboard text entry have been exercised on physical hardware.
+Native pointer movement and primary click are present; mouse secondary-button,
+wheel, and pointer-precision cases remain tracked independently.
 
 ## Build and test
 
@@ -278,7 +279,7 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
 Yes. Download the unsigned IPA from
-[UTP v0.1.0 Preview 1](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.1),
+[UTP v0.1.0 Preview 2](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.2),
 then re-sign it with your own Apple account using AltStore Classic with
 AltServer, SideStore, Sideloadly, or an Apple development-signing workflow.
 TestFlight and App Store installation are not available.
@@ -324,10 +325,10 @@ game installs, launches, and plays on real iPhone and iPad hardware.
 <details>
 <summary><strong>Do controllers, keyboards, and mice work?</strong></summary>
 
-Touch gameplay and Xbox controller play work on physical hardware. The native
-controller, hardware-keyboard, and pointer bridges are included in the device
-target. Specific hot-connect, keyboard text-entry, mouse-button, and pointer
-calibration cases remain active follow-ups.
+Touch gameplay, Xbox controller startup and hot-connect, hardware-keyboard text
+entry, and UTP's virtual keyboard work on physical hardware. Mouse/trackpad
+movement and primary click are present, while secondary-button, wheel, and
+pointer-precision behavior remain active follow-ups.
 </details>
 
 <details>
@@ -342,7 +343,7 @@ observer-confirmed chat—not whether the original server path works.
 <details>
 <summary><strong>Why must the public IPA be re-signed?</strong></summary>
 
-Apple does not allow an unsigned IPA to install directly. Preview 1 is stripped
+Apple does not allow an unsigned IPA to install directly. Preview 2 is stripped
 of the maintainer's provisioning profile and device list so testers can apply
 their own signature. This is still not a universal one-tap installer.
 TestFlight and App Store distribution remain separate future channels.
