@@ -238,9 +238,14 @@ final class UT99EngineBridge {
             // Explicit escape hatch for non-UIKit diagnostics only.
             Thread(block: invoke).start()
         } else {
-            // SDL's UIKit video backend creates UIWindow/Metal objects and
-            // must run the original entry on the main thread.
-            DispatchQueue.main.async(execute: invoke)
+            // SDL's UIKit video backend creates UIWindow/Metal objects, so the
+            // original entry must remain on the main thread. Do not execute it
+            // as a main-dispatch block, though: Unreal does not return, which
+            // permanently occupies the serial main queue and starves Apple's
+            // main-thread GameController connect/disconnect notifications.
+            // A main-run-loop block preserves SDL's thread requirement while
+            // allowing SDL's nested UIKit event pump to service that queue.
+            RunLoop.main.perform(inModes: [.default], block: invoke)
         }
         return .started
     }

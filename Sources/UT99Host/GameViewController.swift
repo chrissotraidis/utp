@@ -234,6 +234,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var menuKeyboardShifted = false
     private var menuKeyboardCompactOverride: Bool?
     private var lastKeyboardResponderDiagnostic = ""
+    #if targetEnvironment(simulator)
+    private var controllerLifecycleSmokeController: GCVirtualController?
+    #endif
     private var touchInputWasVisible = false
     private var appleIntegrationObservers: [NSObjectProtocol] = []
     private let networkMonitor = NWPathMonitor()
@@ -822,6 +825,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             _ = configureAvailableControllers(reason: "pre-engine controller probe")
             NSLog("UT99 controller probe armed engineStarted=false")
         }
+        if CommandLine.arguments.contains("-UT99ControllerLifecycleSmokeTest") {
+            scheduleControllerLifecycleSmokeTest()
+        }
         if g2SmokeRequested {
             pendingG2DiagnosticsExport = true
             NSLog("UT99 G2 host smoke started importer=true diagnostics=true metal=true standardTouch=true")
@@ -1148,6 +1154,83 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         updateTouchVisibility()
         GCController.startWirelessControllerDiscovery { NSLog("UT99 controller discovery finished") }
         activateGameAudioSession()
+    }
+
+    private func scheduleControllerLifecycleSmokeTest() {
+        #if targetEnvironment(simulator)
+        // Schedule from a background queue, then require the main dispatch
+        // queue to execute after Unreal has entered its non-returning loop.
+        // This reproduces the exact queue boundary used by GameController's
+        // physical connect and disconnect notifications.
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 3) { [weak self] in
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                NSLog("UT99 controller lifecycle smoke main-queue=alive")
+                let configuration = GCVirtualController.Configuration()
+                configuration.elements = [
+                    GCInputLeftThumbstick,
+                    GCInputRightThumbstick,
+                    GCInputButtonA,
+                    GCInputButtonB,
+                    GCInputLeftTrigger,
+                    GCInputRightTrigger,
+                    GCInputButtonMenu,
+                    GCInputButtonOptions,
+                ]
+                configuration.isHidden = true
+                let virtualController = GCVirtualController(configuration: configuration)
+                self.controllerLifecycleSmokeController = virtualController
+                virtualController.connect { [weak self, weak virtualController] error in
+                    NSLog("UT99 controller lifecycle smoke connect-reply error=%@",
+                          error?.localizedDescription ?? "none")
+                    guard error == nil, let self, let virtualController else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NSLog("UT99 controller lifecycle smoke menu-input")
+                        virtualController.setPosition(
+                            CGPoint(x: 0.65, y: 0.35),
+                            forDirectionPadElement: GCInputLeftThumbstick
+                        )
+                        virtualController.setValue(1, forButtonElement: GCInputButtonA)
+                        virtualController.setValue(0, forButtonElement: GCInputButtonA)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        NSLog("UT99 controller lifecycle smoke mode-request=gameplay")
+                        virtualController.setValue(1, forButtonElement: GCInputButtonOptions)
+                        virtualController.setValue(0, forButtonElement: GCInputButtonOptions)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        NSLog("UT99 controller lifecycle smoke gameplay-input")
+                        virtualController.setPosition(
+                            CGPoint(x: 0.35, y: 0.80),
+                            forDirectionPadElement: GCInputLeftThumbstick
+                        )
+                        virtualController.setPosition(
+                            CGPoint(x: 0.55, y: -0.30),
+                            forDirectionPadElement: GCInputRightThumbstick
+                        )
+                        virtualController.setValue(1, forButtonElement: GCInputRightTrigger)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        virtualController.setPosition(.zero, forDirectionPadElement: GCInputLeftThumbstick)
+                        virtualController.setPosition(.zero, forDirectionPadElement: GCInputRightThumbstick)
+                        virtualController.setValue(0, forButtonElement: GCInputRightTrigger)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                        NSLog("UT99 controller lifecycle smoke mode-request=menu")
+                        virtualController.setValue(1, forButtonElement: GCInputButtonOptions)
+                        virtualController.setValue(0, forButtonElement: GCInputButtonOptions)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
+                        NSLog("UT99 controller lifecycle smoke disconnect-request")
+                        virtualController.disconnect()
+                        self.controllerLifecycleSmokeController = nil
+                    }
+                }
+            }
+        }
+        #else
+        NSLog("UT99 controller lifecycle smoke skipped reason=device-build")
+        #endif
     }
 
     private func updateTouchVisibility() {

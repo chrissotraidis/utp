@@ -47,18 +47,27 @@ One of those generic presses also switched the internal input mode while the
 visible touch layout remained in Gameplay. The full evidence is recorded in
 [`evidence/engine-startup/2026-08-26-input-rejection/RESULT.md`](evidence/engine-startup/2026-08-26-input-rejection/RESULT.md).
 
-The immediate local follow-up implements only evidence-backed containment and
+The accepted keyboard follow-up implements only evidence-backed containment and
 route convergence: responder-only input is menu-only, and host/physical
 printable keys share one SDL keyboard helper. Packaged UWindow source proves
 that `UWindowEditBox.KeyType` inserts only while `bKeyDown` is true. The helper
 therefore queues KeyDown, TextInput, then KeyUp instead of posting plain text or
 releasing the virtual key too early. A deterministic real-engine Simulator run
 visibly entered `Ab 9` in Player Name and its dequeue log confirms that exact
-order. This is not physical acceptance, and the follow-up has not been
-physically accepted. The signed product was installed in place on 2026-08-27;
+order. The signed product was installed in place on 2026-08-27;
 the preferences plist and both UT configuration files remained byte-identical,
-and normal engine startup passed. Only the single focused keyboard check
-remains for this slice.
+normal engine startup passed, and both the attached hardware keyboard and UTP
+virtual keyboard edited the real Player Name field. That accepted baseline is
+frozen in `db4e8d1`.
+
+The controller lifecycle candidate changes only how the non-returning engine
+entry is scheduled. It remains on the main thread for SDL/UIKit/Metal, but no
+longer occupies a serial main-dispatch block forever. A real-engine Simulator
+probe connected an extended virtual controller after engine entry, completed
+menu input, switched to Gameplay, delivered movement/look/right-trigger input,
+returned to Menu, and disconnected cleanly. The `Ab 9` Player Name regression
+then passed unchanged. Physical Xbox hot-connect/disconnect remains the sole
+acceptance boundary for this slice.
 
 The same candidate also contains a narrow recovery presentation repair. The
 dedicated iPad Simulator reproduced the blank landing screen after choosing
@@ -69,25 +78,27 @@ cycle pass locally. This remains distinct from physical iPad acceptance.
 
 ## Confirmed input findings
 
-- Physical keyboard presses can reach the UIKit host, but after keyboard
-  reconnect the rejected build sometimes emitted no host responder callbacks.
-  Separately, the software-key rejection was caused by event order inside
-  UWindow: TextInput arrived after KeyUp, so `bKeyDown` was false. The ordered
-  helper passes in Simulator; physical responder/reconnect acceptance remains.
+- Physical hardware and UTP virtual-keyboard entry are accepted. The
+  software-key rejection was caused by event order inside UWindow: TextInput
+  arrived after KeyUp, so `bKeyDown` was false. The accepted helper holds the
+  matching key through TextInput and must remain unchanged.
 - A controller present before launch obtains an extended profile and works. In
   the rejected hot-connect run, no `GCController` object appeared at all;
   iPadOS exposed only generic `UIPress` values. Both sticks collapse into the
   same directions and triggers have no stable profile in that path.
-- Responder `playPause` currently changes the internal Menu/Gameplay state and
-  defers the overlay change onto the UT-owned main queue. The visible layout
-  can therefore disagree with routing state during a live match.
+- The rejected build could process responder `playPause` immediately while its
+  deferred overlay change never ran, leaving mode and layout crossed. The
+  lifecycle candidate restores main-queue progress; the post-engine Simulator
+  probe completed both mode transitions and their UI reconciliation.
 - Menu cursor movement crosses two hard dead zones without rescaling,
   hysteresis, or sample filtering.
 - Gameplay left-stick movement is translated to digital arrow-key holds after
   fixed dead-zone and cardinal-snap thresholds; stick magnitude is not analog
   movement speed.
-- Controller objects are configured once rather than fully reconciled across
-  every hot-connect, reconnect, and foreground transition.
+- Controller reconciliation handlers exist for connect and disconnect, but the
+  rejected non-returning main-dispatch engine entry prevented those lifecycle
+  notifications from running reliably. The main-run-loop scheduling candidate
+  passes post-engine connect/disconnect locally and awaits physical acceptance.
 - Touch visibility can override the pointer surface's explicit input mode,
   allowing controller and mouse/trackpad routing to disagree.
 - The multiplayer Escape failure is not yet localized between input delivery

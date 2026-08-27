@@ -328,6 +328,13 @@ if printf '%s\n' "$fallback_body" | rg -q 'toggleInputModeFromController\(|publi
 fi
 printf '%s\n' "$fallback_body" | rg -Fq 'controller fallback mode switch ignored reason=responder-only'
 rg -Fq 'UT99 controller probe armed engineStarted=false' Sources/UT99Host/GameViewController.swift
+rg -Fq 'RunLoop.main.perform(inModes: [.default], block: invoke)' Sources/UT99Host/UT99EngineBridge.swift
+if rg -Fq 'DispatchQueue.main.async(execute: invoke)' Sources/UT99Host/UT99EngineBridge.swift; then
+    echo "Engine entry must not permanently occupy the serial main dispatch queue" >&2
+    exit 1
+fi
+rg -Fq 'UT99 controller lifecycle smoke main-queue=alive' Sources/UT99Host/GameViewController.swift
+rg -Fq 'GCVirtualController(configuration: configuration)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'CONTROLLER PROBE · extended profile ready' Sources/UT99Host/GameViewController.swift
 rg -Fq 'extendedControllerConnected' Sources/UT99Host/GameViewController.swift
 rg -Fq 'responderFallback=%@' Sources/UT99Host/GameViewController.swift

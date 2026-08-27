@@ -8,23 +8,25 @@ not proof that a build satisfies it.
 
 ## Snapshot identity
 
-- Source baseline: `705a765de3b5fb06a2bd3e15119bef1ffba99bb6`
+- Physically accepted keyboard baseline: `db4e8d1`
 - Controller-at-launch log: `utp-investigation-controller-relaunch-20260826.stdout`
 - Rejected physical result:
   [`evidence/engine-startup/2026-08-26-input-rejection/RESULT.md`](evidence/engine-startup/2026-08-26-input-rejection/RESULT.md)
 - Accepted keyboard result:
   [`evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md)
-- Installed matching product:
+- Installed controller candidate:
   `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
-- Installed executable UUID: `76FC6C39-B7E0-3AC1-AFED-0F73CFA96E40`
+- Installed executable UUID: `0B4958D1-0EC7-3408-A82A-9D10F215031D`
 - Installed executable SHA-256:
-  `d141362e540d2bab1cc40ce39cccb7ab4673c0d251d9c96f5ed13c6d2dcd5cab`
+  `7cf5c81c240f0f7f29a094178572e7e8d9b78fe8d134965e710590de2351354d`
 
-The current iPad binary was installed in place without changing the data
-container. Hardware and host software keyboard entry were physically accepted
-on 2026-08-27. Controller hot-connect and reconnect remain rejected/open. No
-later worktree edit may be called physically accepted merely because it builds
-or passes a Simulator probe.
+The controller candidate was installed in place without changing the data
+container; preferences and both UT INI files are byte-identical before and
+after installation. Hardware and host software keyboard entry were physically
+accepted on the frozen 2026-08-27 baseline, and the candidate passes the same
+real-engine `Ab 9` regression locally. Controller hot-connect and reconnect
+remain physically open. No later worktree edit may be called physically
+accepted merely because it builds or passes a Simulator probe.
 
 The installed candidate contains responder-only controller containment. Its
 host and physical printable keys share the accepted KeyDown, TextInput, KeyUp
@@ -87,7 +89,7 @@ and attributed correctly. They cannot prove that an opaque original UWindow
 field visibly changed, that the stock cursor visually aligns with the iPad
 pointer, or that iPadOS published a hot-connected controller profile.
 
-## The only three types of physical observation still needed
+## The only two input observations still needed
 
 Physical work is limited to these short yes/no observations:
 
@@ -95,9 +97,7 @@ Physical work is limited to these short yes/no observations:
    hot-connect the Xbox controller once and confirm that the log reports a real
    extended profile before moving both sticks and a trigger. Do not retest full
    gameplay while the app reports responder-only input.
-2. **Software text:** after dequeue/consumer logging exists, select Player Name
-   once and enter one physical character followed by one host-key character.
-3. **Physical pointer:** move to the four display edges and select one stock
+2. **Physical pointer:** move to the four display edges and select one stock
    submenu with the physical trackpad.
 
 Codex will mirror and record the iPad, watch the result, collect timestamps, and
@@ -171,6 +171,34 @@ rebuild, reinstall, or repeat a failed gesture.
   byte-identical. The normal launch reached `Game engine initialized`, entered
   the main loop, and rendered the stock menu. The focused physical keyboard
   observation subsequently passed.
+
+## Controller lifecycle candidate, 2026-08-27
+
+- The keyboard-accepted source is frozen in `db4e8d1`; the controller candidate
+  is a separate diff and does not change the SDL keyboard patch or either
+  printable-key producer.
+- Root cause: Unreal was entered from a serial main-dispatch block and never
+  returned. SDL's nested UIKit event pump could continue servicing UIKit event
+  sources, but the executing block permanently occupied the main dispatch
+  queue used by GameController lifecycle notifications and host UI
+  reconciliation.
+- The candidate keeps SDL/Metal/Unreal on the main thread but schedules entry
+  through the main run loop instead of a non-returning main-dispatch block.
+- A Simulator-only hidden `GCVirtualController` test connects three seconds
+  after the real engine starts. The live run proved the main queue remained
+  responsive, published an extended profile, delivered menu stick/A input,
+  switched to Gameplay, delivered movement/look/right-trigger input, switched
+  back to Menu, and processed disconnect cleanup.
+- The same candidate then reran the real Player Name probe. The field visibly
+  contained `Ab 9`, and every printable character retained KeyDown, TextInput,
+  KeyUp dequeue order.
+- `make test`, the focused input source guard, Simulator packaging, signed
+  iPhoneOS building, and deep package verification pass. This is strong local
+  lifecycle evidence, not physical controller acceptance.
+- Staged signed host UUID: `0B4958D1-0EC7-3408-A82A-9D10F215031D`.
+  Host SHA-256: `7cf5c81c240f0f7f29a094178572e7e8d9b78fe8d134965e710590de2351354d`.
+  SDL patch SHA-256 remains
+  `68a1ce30d1e8808e7a928269bfc2133c2ea17e6e8ac75b22fb3f07dace2244e2`.
 
 ## Physical keyboard acceptance, 2026-08-27
 
