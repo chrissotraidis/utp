@@ -16,20 +16,21 @@ not proof that a build satisfies it.
   [`evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-keyboard-acceptance/RESULT.md)
 - Foreground discovery follow-up:
   [`evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md`](evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md)
-- Installed controller candidate:
+- Installed foreground-discovery candidate:
   `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
-- Installed executable UUID: `0B4958D1-0EC7-3408-A82A-9D10F215031D`
+- Installed executable UUID: `F97BE745-DD6D-3F98-AD4A-A3996D7F42C5`
 - Installed executable SHA-256:
-  `7cf5c81c240f0f7f29a094178572e7e8d9b78fe8d134965e710590de2351354d`
+  `bdce45653bef78e54ef82957ef5e1d3025a5f0422e8912173d1b38230d23803b`
 
-The `d10f613` controller candidate was installed in place without changing the data
-container; preferences and both UT INI files are byte-identical before and
-after installation. Hardware and host software keyboard entry were physically
-accepted on the frozen 2026-08-27 baseline, and the candidate passes the same
-real-engine `Ab 9` regression locally. Physical testing rejected its Xbox
-hot-connect path while reconfirming controller-at-launch menu and gameplay.
-No later worktree edit may be called physically
-accepted merely because it builds or passes a Simulator probe.
+The `097a630` foreground-discovery candidate was installed in place without
+changing the data container; preferences and both UT INI files are
+byte-identical before and after installation. Hardware and host software
+keyboard entry were physically accepted on the frozen 2026-08-27 baseline, and
+the candidate passes the same real-engine `Ab 9` regression locally. Its
+predecessor `d10f613` was physically rejected for Xbox hot-connect while
+reconfirming controller-at-launch menu and gameplay. No later worktree edit may
+be called physically accepted merely because it builds or passes a Simulator
+probe.
 
 The installed candidate contains responder-only controller containment. Its
 host and physical printable keys share the accepted KeyDown, TextInput, KeyUp

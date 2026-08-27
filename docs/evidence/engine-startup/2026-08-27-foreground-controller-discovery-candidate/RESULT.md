@@ -72,7 +72,7 @@ ordering.
 - deep iOS package verification: passed;
 - `git diff --check`: passed.
 
-## Signed product identity
+## Installed product identity
 
 - Bundle identifier: `com.ut99apple.client`
 - Host UUID: `F97BE745-DD6D-3F98-AD4A-A3996D7F42C5`
@@ -82,6 +82,15 @@ ordering.
   `1830d33b185c66e75ea4cc0e96cb8b361fd32c3010b31f54db680a6eb5af4277`
 - SDL patch SHA-256 remains:
   `68a1ce30d1e8808e7a928269bfc2133c2ea17e6e8ac75b22fb3f07dace2244e2`
+
+The candidate was installed in place on the attached iPad. Pre/post copies of
+the current preferences plist, `User.ini`, and `UnrealTournament.ini` are
+byte-identical. Their SHA-256 values are, respectively:
+
+- `f9ec692e41aefa5ffbb38050094e932c8734f9200be744ef619c401ae886d294`;
+- `7f5539979bbe67a0471faaf04ba7d454db13b21e7dc80477f4cf95368d1945aa`;
+  and
+- `43a8ae5c33d00d4d572eb4852e462d567b612b08c45db2888e7f75bbe80b2809`.
 
 ## Remaining boundary
 
