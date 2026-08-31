@@ -6,14 +6,28 @@ for the evidence-backed working, rejected, and open behavior of the current
 iPad build.
 
 UTP exposes two explicit input modes. The three-dot host menu
-switches between **Use Menu Controls** and **Use Gameplay Controls**. The
-selected mode applies to touch, controller, mouse, and trackpad routing. Input
+shows the current mode and switches between **Menu Controls** and **Gameplay
+Controls**. In Menu mode, MOVE controls the stock cursor and SELECT chooses;
+in Gameplay mode, MOVE walks and the right-side surface or right stick looks.
+The selected mode applies to touch, controller, and pointer routing. A trackpad
+and a mouse are the same pointer input class. Input
 mode and touch-overlay visibility are independent: changing modes never turns
 touch controls on, sends Escape, or changes game state.
 
+The optional **Capture Mouse / Trackpad** action requests native iPadOS pointer
+lock. When iPadOS grants it, the system pointer is hidden and UTP consumes one
+raw `GCMouse` stream: deltas move Unreal's stock cursor in Menu mode and control
+look in Gameplay mode; buttons and wheel events retain Unreal's mouse bindings.
+While capture is enabled, **Change Mouse / Trackpad Speed** cycles through persistent
+20%, 35%, 50%, 75%, and 100% raw-delta presets. The default is 35%.
+Opening the host panel, leaving the foreground, or turning capture off releases
+the request and restores the ordinary iPadOS pointer. The system can deny lock
+outside a full-screen foreground scene, so requested and granted state are
+recorded separately in diagnostics.
+
 Connecting an extended controller auto-hides touch controls once when the
-saved controller-auto-hide preference is enabled. A later explicit **Turn
-Touch Controls On** overrides that transient hide even while the controller
+saved controller-auto-hide preference is enabled. A later explicit **Show
+Touch Controls** overrides that transient hide even while the controller
 remains connected. Disconnecting clears the transient controller hide; it
 does not rewrite the player's saved touch-enabled preference. A fresh launch
 with no detected controller restores touch controls as the safe input baseline.
@@ -24,9 +38,11 @@ with no detected controller restores touch controls as the safe input baseline.
 | SELECT / primary touch | Left mouse click | Fire |
 | BACK / GAME MENU | Escape; close or go back | Escape; open menu |
 | Direct touch on right half | No menu cursor teleport | Look |
-| Trackpad or mouse motion | Move stock UT cursor | Look |
-| Primary mouse click | Left mouse click | Fire |
-| Keyboard | Stock configured key | Stock configured key |
+| Pointer motion (trackpad or mouse) | Move stock UT cursor | Look |
+| Primary pointer click | Left mouse click | Fire |
+| Secondary pointer click | Right mouse button | Alt-fire |
+| Pointer scroll | Stock mouse wheel | Previous/next weapon |
+| Keyboard | Stock configured key/text entry | WASD movement; other keys retain stock configured behavior |
 | Controller left stick | Move stock UT cursor | Move player |
 | Controller right stick | No menu action | Look |
 | Controller A or right trigger | Left mouse click | Jump or fire |
@@ -72,9 +88,9 @@ must not switch Menu/Gameplay mode; only a configured extended controller's
 explicit View/Options binding may do so.
 
 Hardware and software text entry goes through the embedded SDL keyboard state
-machine. The host menu's **Escape / UT Menu** action exposes Escape for touch
+machine. The host menu's contextual **Open UT Menu** or **Escape / Back** action exposes Escape for touch
 users, including server transitions that say “Press Escape to begin.” The
-**Multiplayer** action always opens the original browser through Multiplayer →
+**Open Server Browser** action opens the original browser through Multiplayer →
 Find Internet Games; Menu Controls being active is not treated as proof that
 Unreal's menu is already open.
 

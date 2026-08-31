@@ -50,6 +50,9 @@ final class UT99EngineBridge {
     private let controllerLookQueue = DispatchQueue(label: "com.ut99apple.controller-look", qos: .userInteractive)
     private var controllerLookValue = CGPoint.zero
     private var controllerLookTimer: DispatchSourceTimer?
+    private let hardwareMouseQueue = DispatchQueue(label: "com.ut99apple.hardware-mouse", qos: .userInteractive)
+    private var hardwareMouseRemainderX: Float = 0
+    private var hardwareMouseRemainderY: Float = 0
     private let menuCursorQueue = DispatchQueue(label: "com.ut99apple.menu-cursor", qos: .userInteractive)
     private var menuCursorValue = CGPoint.zero
     private var menuCursorTimer: DispatchSourceTimer?
@@ -546,6 +549,37 @@ final class UT99EngineBridge {
         if !active { pushMouseMotion(xrel: 0, yrel: 0) }
     }
 
+    /// GCMouse reports unaccelerated device deltas. Forward those deltas
+    /// directly so Unreal's existing mouse sensitivity and bindings remain the
+    /// only gameplay transform. GCMouse's positive Y points up; SDL relative Y
+    /// points down.
+    func publishHardwareMouseMotion(deltaX: Float, deltaY: Float) {
+        hardwareMouseQueue.async { [weak self] in
+            guard let self else { return }
+            self.hardwareMouseRemainderX += deltaX
+            self.hardwareMouseRemainderY -= deltaY
+            let x = Int32(max(Float(Int32.min), min(Float(Int32.max), self.hardwareMouseRemainderX)).rounded(.towardZero))
+            let y = Int32(max(Float(Int32.min), min(Float(Int32.max), self.hardwareMouseRemainderY)).rounded(.towardZero))
+            self.hardwareMouseRemainderX -= Float(x)
+            self.hardwareMouseRemainderY -= Float(y)
+            guard x != 0 || y != 0 else { return }
+            self.pushMouseMotion(xrel: x, yrel: y)
+        }
+    }
+
+    func publishHardwareMouseButton(button: UInt8, pressed: Bool) {
+        hardwareMouseQueue.async { [weak self] in
+            self?.pushMouseButton(button: button, pressed: pressed)
+        }
+    }
+
+    func publishHardwareMouseWheel(y: Int32) {
+        guard y != 0 else { return }
+        hardwareMouseQueue.async { [weak self] in
+            self?.pushMouseWheel(y: y)
+        }
+    }
+
     /// A physical right stick reports only when its value changes, while UT
     /// needs relative mouse input continuously for as long as the stick is
     /// held. Repeat the held value off-main so controller aiming remains truly
@@ -801,6 +835,25 @@ final class UT99EngineBridge {
         guard let key = SDLKeySym(usage: usage) else { return }
         NSLog("UT99KeyboardBridge usage=%hu sym=%d pressed=%@", usage, key, pressed ? "true" : "false")
         pushHardwareKey(usage: usage, key: key, pressed: pressed)
+    }
+
+    /// The physical iPad proved that printable hardware-key events reach the
+    /// bridge while W/A/S/D still do not drive this legacy input path. Route
+    /// those four keys through the same directional symbols already accepted
+    /// for touch movement, but only when the host is explicitly in Gameplay.
+    /// Menu/text entry continues to receive the original printable keys.
+    func publishGameplayMovementKey(usage: Int, pressed: Bool) {
+        let key: Int32
+        switch usage {
+        case UIKeyboardHIDUsage.keyboardW.rawValue: key = (1 << 30) | 82
+        case UIKeyboardHIDUsage.keyboardS.rawValue: key = (1 << 30) | 81
+        case UIKeyboardHIDUsage.keyboardA.rawValue: key = (1 << 30) | 80
+        case UIKeyboardHIDUsage.keyboardD.rawValue: key = (1 << 30) | 79
+        default: return
+        }
+        NSLog("UT99KeyboardBridge gameplayMovement usage=%hu sym=%d pressed=%@",
+              usage, key, pressed ? "true" : "false")
+        pushKey(key: key, pressed: pressed)
     }
 
     @discardableResult
@@ -1247,13 +1300,29 @@ final class UT99EngineBridge {
                 execute: work
             )
         }
-        let menuDelay = originalMenuAlreadyOpen ? 0 : 180
+        // Physical iPad evidence showed that the original 180 ms cadence only
+        // reached UMenu's top bar. Give the legacy menu time to construct and
+        // focus after the host overlay and pointer lock are dismissed.
+        let menuDelay = originalMenuAlreadyOpen ? 0 : 450
+        let navigationStep = 300
         if !originalMenuAlreadyOpen {
-            schedule(0) { keyPress(27) } // Escape opens the Game menu.
+            schedule(0) {
+                NSLog("UT99 server browser route phase=open-menu")
+                keyPress(27) // Escape opens the Game menu.
+            }
         }
-        schedule(menuDelay) { keyPress((1 << 30) | 79) } // Right selects Multiplayer.
-        schedule(menuDelay + 180) { keyPress((1 << 30) | 81) } // Down selects Find Internet Games.
-        schedule(menuDelay + 360) { keyPress(13) } // Return opens UBrowser.
+        schedule(menuDelay) {
+            NSLog("UT99 server browser route phase=select-multiplayer")
+            keyPress((1 << 30) | 79) // Right selects Multiplayer.
+        }
+        schedule(menuDelay + navigationStep) {
+            NSLog("UT99 server browser route phase=select-find-internet-games")
+            keyPress((1 << 30) | 81) // Down selects Find Internet Games.
+        }
+        schedule(menuDelay + navigationStep * 2) {
+            NSLog("UT99 server browser route phase=open-browser")
+            keyPress(13) // Return opens UBrowser.
+        }
     }
 
     private func runServerBrowserPointerSmokeTest(joinFirstServer: Bool) {

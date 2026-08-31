@@ -1,6 +1,6 @@
 # Current input status and low-burden validation plan
 
-Last reconciled: 2026-08-27
+Last reconciled: 2026-08-31
 
 This is the acceptance authority for the current iPad input work. The behavior
 described in [`INPUT_CONTROLS.md`](INPUT_CONTROLS.md) is the target contract,
@@ -18,11 +18,45 @@ not proof that a build satisfies it.
   [`evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md`](evidence/engine-startup/2026-08-27-foreground-controller-discovery-candidate/RESULT.md)
 - Accepted controller hot-connect result:
   [`evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md`](evidence/engine-startup/2026-08-27-controller-hot-connect-acceptance/RESULT.md)
+- Accepted keyboard-plus-pointer follow-up:
+  [`evidence/engine-startup/2026-08-30-pointer-capture-physical-partial/RESULT.md`](evidence/engine-startup/2026-08-30-pointer-capture-physical-partial/RESULT.md)
 - Installed foreground-discovery candidate:
   `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
 - Installed executable UUID: `F97BE745-DD6D-3F98-AD4A-A3996D7F42C5`
 - Installed executable SHA-256:
   `bdce45653bef78e54ef82957ef5e1d3025a5f0422e8912173d1b38230d23803b`
+- Physically tested pointer-capture baseline, 2026-08-30:
+  `build/ios-device-app/Build/Products/Debug-iphoneos/UT99Apple.app`
+- Pointer-capture candidate executable UUID:
+  `D4C2B665-63B2-3B50-91F4-FB26C1096AC4`
+- Pointer-capture candidate executable SHA-256:
+  `7bc460acbbef646feb23535f736db63fffa13284eda3985201a871a318094322`
+- Pointer-capture candidate SDL SHA-256:
+  `9d62220e21ea62538a91f274b80350886f9c78fa2ed38193b95e6c219ab79c06`
+- Installed pointer-speed/WASD follow-up UUID:
+  `C908B6EE-32D5-3B93-BC2F-9405C3DDBFD0`
+- Installed pointer-speed/WASD follow-up executable SHA-256:
+  `c56468c3f60b13b42f4dca08d9aaff45f04c7ea01b1acc323770127f6bc3f21f`
+- Installed pointer-speed/WASD follow-up SDL SHA-256:
+  `2a3b8f15ed1277f3f39f491a619bcab5e583fe90a610de90c647e2888b57b336`
+- Installed GCKeyboard WASD candidate UUID:
+  `DD3DF80E-152B-3001-B440-BD039FC79C35`
+- Installed GCKeyboard WASD candidate executable SHA-256:
+  `c86ca65147723b7fe8dee6f4f54dd44b6316fdbf24acc6330f99d9398dfbb649`
+- Installed GCKeyboard WASD candidate SDL SHA-256:
+  `6bcf306b4d698b5811784e4169833bd26d9f1900c4d9f3d7f8fd2d59c3a0d4fd`
+- Installed GCKeyboard callback-plus-poll candidate UUID:
+  `8CDD53E5-C761-3A8E-8C0D-83266A0197B8`
+- Installed GCKeyboard callback-plus-poll executable SHA-256:
+  `afbdaad442a345ffdcada3832af56753847ff1f8a00fb35accd791be7135b4cd`
+- Installed GCKeyboard callback-plus-poll SDL SHA-256:
+  `7035d4eb506faa383d32fce0812c9c981a10b4fc4c367558bfcbf338678bbc01`
+- Installed conditional-panel/server-browser follow-up UUID:
+  `D779F94B-E86C-3030-8F1B-43CE011ED368`
+- Installed conditional-panel/server-browser executable SHA-256:
+  `973406ca7f1576f11742f9a7311332a29e667c53829a702f6089f6da2ed0f9fa`
+- Installed conditional-panel/server-browser SDL SHA-256:
+  `f674efc57c0f90ac852a845f4ab8c5187ee2ee862811b8b8e05bf976b2a7075a`
 
 The `097a630` foreground-discovery candidate was installed in place without
 changing the data container; preferences and both UT INI files are
@@ -38,6 +72,21 @@ The installed candidate contains responder-only controller containment. Its
 host and physical printable keys share the accepted KeyDown, TextInput, KeyUp
 bridge. The rejected direct engine-character and Unicode-plus-text helpers are
 absent.
+
+On 2026-08-31, the user physically accepted the callback-plus-poll candidate
+in an Oblivion deathmatch. Explicit Gameplay mode delivered held WASD movement,
+captured trackpad look, pointer buttons, and the higher sensitivity presets.
+The already-connected controller continued to work simultaneously. The same
+run accepted the host keyboard and Escape actions. This closes the combined
+keyboard, trackpad/mouse, and controller input defect; it does not prove wheel
+behavior that was not separately narrated.
+
+The conditional-panel/server-browser follow-up was then installed in place on
+the same iPad. Preferences, `User.ini`, and `UnrealTournament.ini` were nonempty
+and byte-identical before and after installation, and the new process remained
+alive after launch. The user then accepted the menu and final build as working
+great and explicitly authorized Preview 3 publication. This accepts the panel
+conditionality and stock browser-route follow-up at the user-visible level.
 
 ## Evidence labels
 
@@ -60,15 +109,19 @@ absent.
 | In-host keyboard presentation and entry | Accepted on 2026-08-27 | Open/Close presentation, sizing, Delete, uppercase and lowercase printable entry all worked in the real Player Name field. |
 | Diagnostic ZIP and issue-report actions | Accepted | The modal-free export writes the bounded ZIP into the Files-visible UTP Documents folder without freezing the engine. |
 | Audio and offline match flow | Accepted for the present slice | Physical gameplay and music/audio have been observed. Route interruption and long-session acceptance remain separate work. |
+| Captured trackpad or mouse gameplay | Accepted on 2026-08-31 | Capture, relative look, pointer buttons, and the persistent speed presets worked in Oblivion. A higher preset was reported comfortable; the sensitivity values require no change. |
+| Hardware-keyboard gameplay | Accepted on 2026-08-31 | WASD worked after explicitly selecting Gameplay mode. Space and weapon keys remained functional, while UIKit text entry remained intact in Menu mode. |
+| Simultaneous controller plus keyboard and pointer | Accepted on 2026-08-31 | The connected controller continued to work while WASD and the captured trackpad were active. Input sources did not exclude one another. |
 
 ## Broken or unaccepted behavior
 
 | Behavior | Status | Current diagnosis |
 | --- | --- | --- |
 | In-host software keyboard letters and numbers | Accepted on the current installed build | The corrected KeyDown, TextInput, KeyUp sequence visibly edited Player Name on the physical iPad. The privacy-safe device log confirms the same ordered dequeue sequence for the accepted host-key taps. |
-| Physical trackpad pointer | Functional but precision is open | The current physical run found the trackpad usable but imprecise or strange. Host UIKit is the sole pointer producer and SDL `GCMouse` is disabled to prevent duplicate motion/clicks. Four-edge alignment, small-target selection, secondary click, and wheel behavior are not accepted. |
 | Launch curtain and crash-recovery dismissal | Simulator-accepted; physical remains open | The exact blank landing panel after recovery **Not Now** was reproduced in the dedicated iPad Simulator. A deferred panel refresh after alert dismissal now restores the complete Ready card. The same cold-relaunch recovery path passed twice in Simulator; the candidate has not been installed on iPad. |
 | Multiplayer **Press Escape to begin** transition | Open | Escape delivery and the original download/connection state have not been separated. Do not change the prompt or input mapping without a timestamped reproduction. |
+| Three-dot **Open Server Browser** action | Accepted in the final Preview 3 candidate | The first 2026-08-31 tap reached UMenu but not `UBrowser`. The installed follow-up uses a slower, phase-logged stock Multiplayer → Find Internet Games route without replacing the original browser; the user accepted the final menu/build before publication. |
+| Three-dot control conditionality | Accepted in the final Preview 3 candidate | The accepted follow-up labels actual Show/Hide state, exposes Arrange only when useful, and shows speed only while capture is enabled. The user accepted the final menu as working great. |
 | Fresh-install iPad SELECT/BACK defaults | Open | The user's saved layout is usable, but the currently preferred physical positions must be captured before changing defaults. Never overwrite an existing saved layout to test this. |
 
 ## What code and automation can decide without the user
@@ -97,13 +150,15 @@ pointer, or that iPadOS published a hot-connected controller profile.
 ## Remaining focused input observation
 
 Controller publication, hot-connect, original-menu navigation, gameplay, mode
-switching, and pause/resume are physically accepted. The remaining narrow input
-observation is **physical pointer precision**: move to the four display edges,
-select a small stock submenu target, and separately check primary click,
-secondary click, and wheel/scroll behavior.
+switching, WASD, captured pointer look/buttons, sensitivity selection, and
+simultaneous controller use are physically accepted. Remaining input work is
+limited to separately confirming wheel/scroll if required and validating that
+the conditional three-dot wording remains understandable in Menu mode,
+Gameplay mode, controller-auto-hidden touch, visible touch, and uncaptured
+pointer states.
 
-Codex will mirror and record the iPad, watch the result, collect timestamps, and
-correlate the logs. The user should not need to narrate the bug, export logs,
+Codex can mirror the iPad without recording, collect timestamps, and correlate
+the persisted logs. The user should not need to narrate the bug, export logs,
 rebuild, reinstall, or repeat a failed gesture.
 
 ## Rejected candidate evidence, 2026-08-26
@@ -268,10 +323,12 @@ metadata and character counts, never text.
 
 ### 3. Physical pointer, isolated — next input slice
 
-Choose one pointer owner for the candidate. The first discriminator keeps the
-host UIKit pointer route and disables SDL `GCMouse` ownership; it does not add a
-new scale, affine correction, or cursor design. After automated edge-coordinate
-logging, ask only for the four-edge and one-click visual check.
+Use one host-owned Apple pointer route while keeping SDL's separate `GCMouse`
+registration disabled. Uncaptured Menu mode uses UIKit's absolute pointer.
+Opt-in capture requests iPadOS pointer lock and consumes host `GCMouse` raw
+deltas for Unreal's stock cursor or gameplay look. The physical check must prove
+the requested lock is granted, only one cursor remains, keyboard-plus-pointer
+gameplay works, and button/wheel edges are neither duplicated nor lost.
 
 ### 4. Deferred tuning
 
