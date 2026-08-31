@@ -141,12 +141,29 @@ cycle pass locally. This remains distinct from physical iPad acceptance.
 5. **Gameplay movement.** Determine whether the original `JoyX`/`JoyY` axis
    route can safely replace digital arrow-key holds. If it cannot, retain the
    digital bridge but remove stacked thresholds and add transition hysteresis.
-6. **Pointer ownership (candidate ready).** Host UIKit is the sole pointer
-   producer; SDL `GCMouse` setup is disabled. Do not tune scale or add another
-   transform until the four-edge physical check decides whether one is needed.
-7. **Mode consistency.** Make explicit Menu/Gameplay mode authoritative for
-   touch, controller, mouse, and trackpad. Touch visibility must not change
-   pointer routing.
+6. **Pointer ownership (physically accepted 2026-08-31).** The host owns both
+   unlocked UIKit pointer positions and opt-in raw `GCMouse` deltas; SDL's
+   separate `GCMouse` setup remains disabled so only one producer is active.
+   Captured Menu mode moves Unreal's software cursor, while captured Gameplay
+   mode forwards raw deltas and mouse bindings. The first physical capture
+   run passed lock and gameplay look but rejected the raw gain and WASD path;
+   the follow-up adds persistent pointer-speed presets and Gameplay-only WASD
+   translation through the already accepted directional SDL symbols. Physical
+   retest rejected the UIKit `UIPress` source because captured gameplay emitted
+   no host key callback. The next slice owns gameplay WASD through
+   `GCKeyboard.keyChangedHandler`, with held-edge deduplication and release. The
+   2026-08-31 candidate also polls only W/A/S/D at 60 Hz on the same off-main
+   queue because Apple's current SDK describes `GCKeyboardInput` as primarily
+   polling-oriented. Callback and poll edges share one state, handlers re-arm
+   on lifecycle/mode/capture transitions, and a bounded non-text trace records
+   the physical result. The final physical run accepted WASD, captured pointer
+   look/buttons, a comfortable higher speed preset, and simultaneous controller
+   input. Wheel/scroll remains a separately unreported edge.
+7. **Mode consistency (physically accepted 2026-08-31).** Explicit
+   Menu/Gameplay mode is authoritative for touch, controller, mouse, and
+   trackpad. The accepted panel reports actual touch visibility when a
+   controller auto-hides it and removes settings that are irrelevant to the
+   current state.
 8. **Multiplayer Escape.** Correlate Escape delivery with the original engine's
    connection/download state before changing either input or prompt behavior.
 

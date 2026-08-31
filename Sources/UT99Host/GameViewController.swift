@@ -40,6 +40,7 @@ private final class UT99GameSurfaceInputView: UIView {
     /// `pressed == nil` is motion, otherwise it is the left-button edge.
     var onPointer: ((CGPoint, Bool?, Bool) -> Void)?
     var onPrimaryAction: ((Bool) -> Void)?
+    var isPointerCaptured: (() -> Bool)?
     /// Gameplay fingers publish normalized relative deltas. They never click.
     var onLook: ((CGPoint, Bool) -> Void)?
     private weak var trackedTouch: UITouch?
@@ -82,6 +83,7 @@ private final class UT99GameSurfaceInputView: UIView {
     }
 
     @objc private func pointerPressed(_ gesture: UILongPressGestureRecognizer) {
+        guard isPointerCaptured?() != true else { return }
         let location = gesture.location(in: self)
         switch gesture.state {
         case .began:
@@ -103,6 +105,10 @@ private final class UT99GameSurfaceInputView: UIView {
     }
 
     @objc private func pointerHovered(_ gesture: UIHoverGestureRecognizer) {
+        guard isPointerCaptured?() != true else {
+            lastHoverLocation = nil
+            return
+        }
         let location = gesture.location(in: self)
         switch gesture.state {
         case .began:
@@ -214,8 +220,29 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private let backdropLayer = CAGradientLayer()
     private let touchOverlay = GoldenPadTouchOverlay()
     private static let touchInputEnabledKey = "ut99.touch.enabled"
+    private static let pointerCaptureEnabledKey = "ut99.pointer.capture.enabled"
+    private static let pointerSensitivityKey = "ut99.pointer.sensitivity"
+    private static let pointerSensitivityPresets: [Float] = [0.20, 0.35, 0.50, 0.75, 1.00]
+    private static let gameplayMovementKeyUsages: Set<Int> = [
+        UIKeyboardHIDUsage.keyboardW.rawValue,
+        UIKeyboardHIDUsage.keyboardA.rawValue,
+        UIKeyboardHIDUsage.keyboardS.rawValue,
+        UIKeyboardHIDUsage.keyboardD.rawValue,
+    ]
+    private var pointerCaptureRoutingActive = false
+    private var configuredMouseIDs: Set<ObjectIdentifier> = []
+    private let configuredMouseLock = NSLock()
+    private var capturedMouseButtonModes: [UInt8: Bool] = [:]
+    private let capturedMouseButtonLock = NSLock()
+    private var configuredKeyboardID: ObjectIdentifier?
+    private let configuredKeyboardLock = NSLock()
+    private static let keyboardInputTraceFileName = "UT99-keyboard-input.log"
+    private static let keyboardInputTraceEventLimit = 512
+    private let keyboardInputTraceQueue = DispatchQueue(label: "com.ut99apple.keyboard-input-trace")
+    private var keyboardInputTraceEventCount = 0
     private let controllerMonitorQueue = DispatchQueue(label: "com.ut99apple.controller-monitor")
     private var controllerMonitorTimer: DispatchSourceTimer?
+    private var keyboardPollTimer: DispatchSourceTimer?
     private var lastControllerMonitorSignature = ""
     private var configuredControllerIDs: Set<ObjectIdentifier> = []
     private let configuredControllerLock = NSLock()
@@ -226,6 +253,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var controllerDiscoveryGeneration = 0
     private var menuSelectPressed = false
     private var hardwareTextKeyUsages: Set<Int> = []
+    private var hardwareGameplayMovementKeyUsages: Set<Int> = []
+    private let hardwareGameplayMovementKeyLock = NSLock()
     private var activeControllerFallbackPresses: [ObjectIdentifier: UIPress.PressType] = [:]
     private var lastControllerFallbackMenuVector = CGPoint.zero
     private var controllerSampleLastLogAt: [String: TimeInterval] = [:]
@@ -291,6 +320,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation { .landscapeLeft }
     override var shouldAutorotate: Bool { true }
     override var canBecomeFirstResponder: Bool { true }
+    override var prefersPointerLocked: Bool { shouldRequestPointerCapture }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -298,6 +328,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         claimKeyboardResponder(reason: "view-did-appear")
         presentSDLWindowIfAvailable()
         presentRecoveryPromptIfNeeded()
+        updatePointerCapturePreference(reason: "view-did-appear")
         // The host shell has its own bounded Metal presentation requirement
         // before the transformed engine takes ownership of the SDL window.
         // Request one frame after layout so currentDrawable is available.
@@ -363,6 +394,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                     hardwareTextKeyUsages.insert(usage)
                     NSLog("UT99KeyboardBridge text accepted characters=%lu usage=%hu",
                           key.characters.count, usage)
+                } else if !originalMenuInputActive,
+                          Self.gameplayMovementKeyUsages.contains(usage) {
+                    handleHardwareGameplayMovementKey(usage: usage, pressed: true)
                 } else {
                     engineBridge.publishHardwareKey(usage: usage, pressed: true)
                 }
@@ -392,7 +426,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 keyboardPresses.insert(press)
                 let usage = key.keyCode.rawValue
                 if hardwareTextKeyUsages.remove(usage) == nil {
-                    engineBridge.publishHardwareKey(usage: usage, pressed: false)
+                    if !handleHardwareGameplayMovementKey(usage: usage, pressed: false) {
+                        engineBridge.publishHardwareKey(usage: usage, pressed: false)
+                    }
                 }
             } else {
                 let identifier = ObjectIdentifier(press)
@@ -415,7 +451,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 keyboardPresses.insert(press)
                 let usage = key.keyCode.rawValue
                 if hardwareTextKeyUsages.remove(usage) == nil {
-                    engineBridge.publishHardwareKey(usage: usage, pressed: false)
+                    if !handleHardwareGameplayMovementKey(usage: usage, pressed: false) {
+                        engineBridge.publishHardwareKey(usage: usage, pressed: false)
+                    }
                 }
             } else {
                 let identifier = ObjectIdentifier(press)
@@ -563,6 +601,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // segmented controls coherent over gameplay.
         overrideUserInterfaceStyle = .dark
         prepareBundledData()
+        resetKeyboardInputTrace()
         let identity = appIdentity()
         if CommandLine.arguments.contains("-UT99RecoverySmokeTest") {
             do {
@@ -625,6 +664,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         }
         gameSurfaceInputView.onPrimaryAction = { [weak self] pressed in
             self?.engineBridge.publishTouchAction(.primaryFire, pressed: pressed)
+        }
+        gameSurfaceInputView.isPointerCaptured = { [weak self] in
+            self?.pointerCaptureRoutingActive == true
         }
         view.addSubview(gameSurfaceInputView)
         NSLayoutConstraint.activate([
@@ -944,6 +986,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         guard hostState != next else { return }
         NSLog("UT99 host state %@ -> %@ reason=%@", hostState.rawValue, next.rawValue, reason)
         hostState = next
+        updatePointerCapturePreference(reason: "host-state-\(next.rawValue)")
         refreshHostMenu()
         updateOnboardingPanel()
     }
@@ -1016,10 +1059,267 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     deinit {
         engineBridge.releaseMovementKeys()
         controllerMonitorTimer?.cancel()
+        keyboardPollTimer?.cancel()
         for observer in appleIntegrationObservers {
             NotificationCenter.default.removeObserver(observer)
         }
         networkMonitor.cancel()
+    }
+
+    private var isPointerCaptureEnabled: Bool {
+        UserDefaults.standard.bool(forKey: Self.pointerCaptureEnabledKey)
+    }
+
+    private var pointerSensitivity: Float {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: Self.pointerSensitivityKey) != nil else { return 0.35 }
+        return max(0.20, min(1.00, defaults.float(forKey: Self.pointerSensitivityKey)))
+    }
+
+    private var pointerSensitivityTitle: String {
+        "CHANGE MOUSE / TRACKPAD SPEED · \(Int((pointerSensitivity * 100).rounded()))%"
+    }
+
+    private var shouldRequestPointerCapture: Bool {
+        guard isViewLoaded,
+              isPointerCaptureEnabled,
+              hostMenuPanel == nil,
+              view.window?.windowScene?.activationState == .foregroundActive else { return false }
+        return hostState == .startingEngine || hostState == .running
+    }
+
+    private func updatePointerCapturePreference(reason: String) {
+        setNeedsUpdateOfPrefersPointerLocked()
+        let locked = view.window?.windowScene?.pointerLockState?.isLocked == true
+        let routing = shouldRequestPointerCapture && locked
+        let wasRouting = pointerCaptureRoutingActive
+        pointerCaptureRoutingActive = routing
+        if wasRouting && !routing {
+            releaseCapturedMouseButtons(reason: reason)
+        }
+        NSLog("UT99 pointer capture reason=%@ enabled=%@ requested=%@ locked=%@ routing=%@ mice=%lu mode=%@",
+              reason,
+              isPointerCaptureEnabled ? "true" : "false",
+              shouldRequestPointerCapture ? "true" : "false",
+              locked ? "true" : "false",
+              pointerCaptureRoutingActive ? "true" : "false",
+              GCMouse.mice().count,
+              originalMenuInputActive ? "menu" : "gameplay")
+    }
+
+    private func setPointerCaptureEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: Self.pointerCaptureEnabledKey)
+        configureAvailableMice(reason: "pointer capture toggled")
+        if let keyboard = GCKeyboard.coalesced {
+            configureKeyboard(keyboard, reason: "pointer-capture-toggled")
+        } else {
+            appendKeyboardInputTrace("reconcile reason=pointer-capture-toggled result=not-found")
+        }
+        closeHostMenuPanel()
+        updatePointerCapturePreference(reason: enabled ? "user-enabled" : "user-disabled")
+        refreshHostMenu()
+    }
+
+    @objc private func togglePointerCaptureEnabled() {
+        setPointerCaptureEnabled(!isPointerCaptureEnabled)
+    }
+
+    private func cyclePointerSensitivity() {
+        let current = pointerSensitivity
+        let next = Self.pointerSensitivityPresets.first { $0 > current + 0.01 }
+            ?? Self.pointerSensitivityPresets[0]
+        UserDefaults.standard.set(next, forKey: Self.pointerSensitivityKey)
+        NSLog("UT99 pointer sensitivity value=%.2f", next)
+        // The source button closes the host panel before invoking its action.
+        // Reopen it so repeated taps can tune the pointer without re-entering
+        // the menu for every preset.
+        toggleMenu()
+    }
+
+    @discardableResult
+    private func configureAvailableMice(reason: String) -> Bool {
+        var mice = GCMouse.mice()
+        if let current = GCMouse.current,
+           !mice.contains(where: { $0 === current }) {
+            mice.append(current)
+        }
+        for mouse in mice { configureMouse(mouse) }
+        NSLog("UT99 mouse reconciliation reason=%@ discovered=%lu configured=%lu",
+              reason, mice.count, configuredMouseIDs.count)
+        return !mice.isEmpty
+    }
+
+    private func configureMouse(_ mouse: GCMouse) {
+        let id = ObjectIdentifier(mouse)
+        configuredMouseLock.lock()
+        let inserted = configuredMouseIDs.insert(id).inserted
+        configuredMouseLock.unlock()
+        guard inserted, let input = mouse.mouseInput else { return }
+
+        mouse.handlerQueue = controllerMonitorQueue
+        input.mouseMovedHandler = { [weak self] _, deltaX, deltaY in
+            guard let self, self.pointerCaptureRoutingActive else { return }
+            let sensitivity = self.pointerSensitivity
+            let scaledX = deltaX * sensitivity
+            let scaledY = deltaY * sensitivity
+            if self.originalMenuInputActive {
+                self.engineBridge.nudgeMenuCursor(by: CGPoint(x: CGFloat(scaledX), y: CGFloat(-scaledY)))
+            } else {
+                self.engineBridge.publishHardwareMouseMotion(deltaX: scaledX, deltaY: scaledY)
+            }
+        }
+        input.leftButton.pressedChangedHandler = { [weak self] _, _, pressed in
+            guard let self,
+                  let menuMode = self.captureMouseButton(button: 1, pressed: pressed) else { return }
+            if menuMode {
+                self.engineBridge.publishMenuCursorClick(pressed: pressed)
+            } else {
+                self.engineBridge.publishHardwareMouseButton(button: 1, pressed: pressed)
+            }
+        }
+        input.rightButton?.pressedChangedHandler = { [weak self] _, _, pressed in
+            guard let self,
+                  self.captureMouseButton(button: 3, pressed: pressed) != nil else { return }
+            self.engineBridge.publishHardwareMouseButton(button: 3, pressed: pressed)
+        }
+        input.middleButton?.pressedChangedHandler = { [weak self] _, _, pressed in
+            guard let self,
+                  self.captureMouseButton(button: 2, pressed: pressed) != nil else { return }
+            self.engineBridge.publishHardwareMouseButton(button: 2, pressed: pressed)
+        }
+        input.scroll.valueChangedHandler = { [weak self] _, _, y in
+            guard let self, self.pointerCaptureRoutingActive, abs(y) >= 0.01 else { return }
+            self.engineBridge.publishHardwareMouseWheel(y: y > 0 ? 1 : -1)
+        }
+        NSLog("UT99 mouse configured vendor=%@", mouse.vendorName ?? "unknown")
+    }
+
+    /// Return the mode that owned the press. Releases remain deliverable after
+    /// pointer lock is revoked so Fire or Alt-Fire cannot become stuck.
+    private func captureMouseButton(button: UInt8, pressed: Bool) -> Bool? {
+        capturedMouseButtonLock.lock()
+        defer { capturedMouseButtonLock.unlock() }
+        if pressed {
+            guard pointerCaptureRoutingActive else { return nil }
+            capturedMouseButtonModes[button] = originalMenuInputActive
+            return originalMenuInputActive
+        }
+        return capturedMouseButtonModes.removeValue(forKey: button)
+    }
+
+    private func releaseCapturedMouseButtons(reason: String) {
+        capturedMouseButtonLock.lock()
+        let buttons = capturedMouseButtonModes
+        capturedMouseButtonModes.removeAll()
+        capturedMouseButtonLock.unlock()
+        for (button, menuMode) in buttons {
+            if button == 1 && menuMode {
+                engineBridge.publishMenuCursorClick(pressed: false)
+            } else {
+                engineBridge.publishHardwareMouseButton(button: button, pressed: false)
+            }
+        }
+        if !buttons.isEmpty {
+            NSLog("UT99 mouse capture released held buttons reason=%@ count=%lu", reason, buttons.count)
+        }
+    }
+
+    private func removeConfiguredMouse(_ mouse: GCMouse) {
+        releaseCapturedMouseButtons(reason: "mouse-disconnected")
+        let id = ObjectIdentifier(mouse)
+        configuredMouseLock.lock()
+        configuredMouseIDs.remove(id)
+        configuredMouseLock.unlock()
+        guard let input = mouse.mouseInput else { return }
+        input.mouseMovedHandler = nil
+        input.leftButton.pressedChangedHandler = nil
+        input.rightButton?.pressedChangedHandler = nil
+        input.middleButton?.pressedChangedHandler = nil
+        input.scroll.valueChangedHandler = nil
+    }
+
+    private func resetKeyboardInputTrace() {
+        let identity = appIdentity()
+        let url = dataSupportRoot().appendingPathComponent(Self.keyboardInputTraceFileName)
+        let line = String(
+            format: "session_start epoch=%.3f version=%@ build=%@\n",
+            Date().timeIntervalSince1970,
+            identity.version,
+            identity.build
+        )
+        keyboardInputTraceQueue.sync {
+            keyboardInputTraceEventCount = 0
+            do {
+                try FileManager.default.createDirectory(
+                    at: url.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try Data(line.utf8).write(to: url, options: .atomic)
+            } catch {
+                NSLog("UT99 keyboard trace reset failed: %@", error.localizedDescription)
+            }
+        }
+    }
+
+    private func appendKeyboardInputTrace(_ event: String) {
+        let url = dataSupportRoot().appendingPathComponent(Self.keyboardInputTraceFileName)
+        keyboardInputTraceQueue.async { [weak self] in
+            guard let self,
+                  self.keyboardInputTraceEventCount < Self.keyboardInputTraceEventLimit else { return }
+            self.keyboardInputTraceEventCount += 1
+            let line = String(format: "epoch=%.3f %@\n", Date().timeIntervalSince1970, event)
+            do {
+                let handle = try FileHandle(forWritingTo: url)
+                defer { try? handle.close() }
+                try handle.seekToEnd()
+                try handle.write(contentsOf: Data(line.utf8))
+            } catch {
+                NSLog("UT99 keyboard trace append failed: %@", error.localizedDescription)
+            }
+        }
+    }
+
+    private func configureKeyboard(_ keyboard: GCKeyboard, reason: String) {
+        let id = ObjectIdentifier(keyboard)
+        configuredKeyboardLock.lock()
+        let replaced = configuredKeyboardID != nil && configuredKeyboardID != id
+        configuredKeyboardID = id
+        configuredKeyboardLock.unlock()
+        guard let input = keyboard.keyboardInput else {
+            appendKeyboardInputTrace("configure reason=\(reason) result=no-input")
+            return
+        }
+
+        // GameController can retain the same coalesced keyboard object while
+        // clearing its handler across app/scene transitions. Always re-arm it.
+        keyboard.handlerQueue = controllerMonitorQueue
+        input.keyChangedHandler = { [weak self] _, _, keyCode, pressed in
+            guard let self else { return }
+            let usage = Int(keyCode.rawValue)
+            guard Self.gameplayMovementKeyUsages.contains(usage) else { return }
+            _ = self.handleHardwareGameplayMovementKey(
+                usage: usage,
+                pressed: pressed,
+                source: "gckeyboard"
+            )
+        }
+        appendKeyboardInputTrace(
+            "configure reason=\(reason) result=armed replaced=\(replaced) mode=\(originalMenuInputActive ? "menu" : "gameplay")"
+        )
+        NSLog("UT99 keyboard configured owner=host-gamecontroller reason=%@ replaced=%@",
+              reason, replaced ? "true" : "false")
+    }
+
+    private func removeConfiguredKeyboard(_ keyboard: GCKeyboard) {
+        configuredKeyboardLock.lock()
+        if configuredKeyboardID == ObjectIdentifier(keyboard) {
+            configuredKeyboardID = nil
+        }
+        configuredKeyboardLock.unlock()
+        keyboard.keyboardInput?.keyChangedHandler = nil
+        releaseHardwareGameplayMovementKeys(reason: "keyboard-disconnected")
+        appendKeyboardInputTrace("disconnect result=released")
+        NSLog("UT99 keyboard disconnected owner=host-gamecontroller")
     }
 
     private func configureAppleIntegrations() {
@@ -1075,6 +1375,37 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             DispatchQueue.main.async { [weak self] in self?.updateTouchVisibility() }
         })
         appleIntegrationObservers.append(center.addObserver(
+            forName: .GCMouseDidConnect, object: nil, queue: nil
+        ) { [weak self] note in
+            guard let mouse = note.object as? GCMouse else { return }
+            self?.configureMouse(mouse)
+            NSLog("UT99 mouse connected: %@", mouse.vendorName ?? "unknown")
+        })
+        appleIntegrationObservers.append(center.addObserver(
+            forName: .GCMouseDidDisconnect, object: nil, queue: nil
+        ) { [weak self] note in
+            guard let mouse = note.object as? GCMouse else { return }
+            self?.removeConfiguredMouse(mouse)
+            NSLog("UT99 mouse disconnected: %@", mouse.vendorName ?? "unknown")
+        })
+        appleIntegrationObservers.append(center.addObserver(
+            forName: .GCKeyboardDidConnect, object: nil, queue: nil
+        ) { [weak self] note in
+            guard let keyboard = note.object as? GCKeyboard else { return }
+            self?.configureKeyboard(keyboard, reason: "connect-notification")
+        })
+        appleIntegrationObservers.append(center.addObserver(
+            forName: .GCKeyboardDidDisconnect, object: nil, queue: nil
+        ) { [weak self] note in
+            guard let keyboard = note.object as? GCKeyboard else { return }
+            self?.removeConfiguredKeyboard(keyboard)
+        })
+        appleIntegrationObservers.append(center.addObserver(
+            forName: UIPointerLockState.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.updatePointerCapturePreference(reason: "pointer-lock-state-changed")
+        })
+        appleIntegrationObservers.append(center.addObserver(
             forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
             if self?.hostState == .running {
@@ -1083,6 +1414,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self?.releaseGameplayInputs()
             self?.touchOverlay.isUserInteractionEnabled = false
             self?.gameSurfaceInputView.isUserInteractionEnabled = false
+            self?.updatePointerCapturePreference(reason: "application-resigned-active")
             NSLog("UT99 lifecycle: resign-active")
         })
         appleIntegrationObservers.append(center.addObserver(
@@ -1103,6 +1435,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 self.restartControllerDiscovery(reason: "application became active")
             }
             self.updateTouchVisibility()
+            self.configureAvailableMice(reason: "application became active")
+            if let keyboard = GCKeyboard.coalesced {
+                self.configureKeyboard(keyboard, reason: "application-became-active")
+            } else {
+                self.appendKeyboardInputTrace("reconcile reason=application-became-active result=not-found")
+            }
+            self.updatePointerCapturePreference(reason: "application-became-active")
             self.activateGameAudioSession()
             self.presentSDLWindowIfAvailable()
             NSLog("UT99 lifecycle: active")
@@ -1153,6 +1492,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             NSLog("UT99 audio route changed reason=%lu", reason)
         })
         let controllerPresentAtLaunch = configureAvailableControllers(reason: "initial integration")
+        configureAvailableMice(reason: "initial integration")
+        if let keyboard = GCKeyboard.coalesced {
+            configureKeyboard(keyboard, reason: "initial-integration")
+        } else {
+            appendKeyboardInputTrace("reconcile reason=initial-integration result=not-found")
+        }
         if !controllerPresentAtLaunch {
             // Touch is the safe input baseline for a controller-free launch.
             // A prior session may have hidden it while a controller was in
@@ -1160,6 +1505,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             UserDefaults.standard.set(true, forKey: Self.touchInputEnabledKey)
         }
         startControllerMonitor()
+        startKeyboardPoller()
         updateTouchVisibility()
         if !controllerPresentAtLaunch {
             restartControllerDiscovery(reason: "initial integration")
@@ -1386,12 +1732,50 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     private func releaseGameplayInputs() {
         clearControllerFallbackPresses(reason: "release-gameplay-inputs", rearmMenuCursor: false)
+        releaseHardwareGameplayMovementKeys(reason: "release-gameplay-inputs")
         gameSurfaceInputView.releasePointer()
         touchOverlay.releaseActiveInputs()
         engineBridge.releaseMovementKeys()
         engineBridge.releaseControllerLook()
         engineBridge.releaseMenuCursor()
         engineBridge.publishTouchLook(.zero, active: false)
+    }
+
+    @discardableResult
+    private func handleHardwareGameplayMovementKey(
+        usage: Int,
+        pressed: Bool,
+        source: String = "uikit"
+    ) -> Bool {
+        guard Self.gameplayMovementKeyUsages.contains(usage) else { return false }
+        hardwareGameplayMovementKeyLock.lock()
+        let shouldPublish: Bool
+        let mode = originalMenuInputActive ? "menu" : "gameplay"
+        if pressed {
+            shouldPublish = !originalMenuInputActive && hardwareGameplayMovementKeyUsages.insert(usage).inserted
+        } else {
+            shouldPublish = hardwareGameplayMovementKeyUsages.remove(usage) != nil
+        }
+        let heldCount = hardwareGameplayMovementKeyUsages.count
+        hardwareGameplayMovementKeyLock.unlock()
+        appendKeyboardInputTrace(
+            "edge source=\(source) usage=\(usage) pressed=\(pressed) mode=\(mode) published=\(shouldPublish) held=\(heldCount)"
+        )
+        if shouldPublish {
+            engineBridge.publishGameplayMovementKey(usage: usage, pressed: pressed)
+        }
+        return shouldPublish
+    }
+
+    private func releaseHardwareGameplayMovementKeys(reason: String) {
+        hardwareGameplayMovementKeyLock.lock()
+        let usages = hardwareGameplayMovementKeyUsages
+        hardwareGameplayMovementKeyUsages.removeAll()
+        hardwareGameplayMovementKeyLock.unlock()
+        for usage in usages {
+            engineBridge.publishGameplayMovementKey(usage: usage, pressed: false)
+        }
+        appendKeyboardInputTrace("release reason=\(reason) count=\(usages.count)")
     }
 
     private func clearControllerFallbackPresses(reason: String, rearmMenuCursor: Bool) {
@@ -1416,7 +1800,17 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     private func setOriginalMenuInputActive(_ active: Bool) {
+        if active != originalMenuInputActive {
+            releaseHardwareGameplayMovementKeys(reason: "input-mode-changed")
+        }
         originalMenuInputActive = active
+        if let keyboard = GCKeyboard.coalesced {
+            configureKeyboard(keyboard, reason: active ? "menu-mode-selected" : "gameplay-mode-selected")
+        } else {
+            appendKeyboardInputTrace(
+                "reconcile reason=\(active ? "menu-mode-selected" : "gameplay-mode-selected") result=not-found"
+            )
+        }
         gameSurfaceInputView.setInputMode(active ? .originalMenu : .gameplayLook)
         touchOverlay.setMenuInteractionActive(active)
         if active {
@@ -1444,6 +1838,47 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     private func toggleTouchInterfaceMode() {
         selectTouchInterfaceMode(menu: !originalMenuInputActive)
+    }
+
+    private func startKeyboardPoller() {
+        let timer = DispatchSource.makeTimerSource(queue: controllerMonitorQueue)
+        timer.schedule(
+            deadline: .now(),
+            repeating: .milliseconds(16),
+            leeway: .milliseconds(2)
+        )
+        timer.setEventHandler { [weak self] in
+            self?.pollHardwareGameplayMovementKeys()
+        }
+        keyboardPollTimer = timer
+        timer.resume()
+    }
+
+    private func pollHardwareGameplayMovementKeys() {
+        guard !originalMenuInputActive else { return }
+        guard let input = GCKeyboard.coalesced?.keyboardInput else {
+            hardwareGameplayMovementKeyLock.lock()
+            let hasHeldKeys = !hardwareGameplayMovementKeyUsages.isEmpty
+            hardwareGameplayMovementKeyLock.unlock()
+            if hasHeldKeys {
+                releaseHardwareGameplayMovementKeys(reason: "keyboard-poll-missing")
+            }
+            return
+        }
+
+        for usage in Self.gameplayMovementKeyUsages {
+            let pressed = input.button(forKeyCode: GCKeyCode(rawValue: usage))?.isPressed == true
+            hardwareGameplayMovementKeyLock.lock()
+            let wasPressed = hardwareGameplayMovementKeyUsages.contains(usage)
+            hardwareGameplayMovementKeyLock.unlock()
+            if pressed != wasPressed {
+                _ = handleHardwareGameplayMovementKey(
+                    usage: usage,
+                    pressed: pressed,
+                    source: "gckeyboard-poll"
+                )
+            }
+        }
     }
 
     private func startControllerMonitor() {
@@ -1662,7 +2097,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         guard controllerFallbackConnected else { return }
         UserDefaults.standard.set(true, forKey: Self.touchInputEnabledKey)
         controllerAutoHideActive = false
-        supportExportNotice = "CONTROLLER MENU-ONLY\nThis controller connected after UTP started, so iPadOS did not expose its separate sticks and triggers. Touch gameplay controls remain on. For full Xbox gameplay, reopen UTP with the controller already connected."
+        supportExportNotice = "CONTROLLER MENU-ONLY\nThis controller connected after UTP started, so iPadOS did not expose its separate sticks and triggers. Touch gameplay controls remain on. For full controller gameplay, reopen UTP with the controller already connected."
         updateTouchVisibility()
         NSLog("UT99 controller responder fallback gameplay protected touch=true")
     }
@@ -2169,11 +2604,19 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self?.engineBridge.publishTouchAction(.pause, pressed: false)
         }
         let touchInterface = action(
-            originalMenuInputActive ? "Use Gameplay Touch Controls" : "Use Menu Touch Controls",
+            originalMenuInputActive ? "Switch to Gameplay Controls" : "Switch to Menu Controls",
             symbol: originalMenuInputActive ? "gamecontroller.fill" : "cursorarrow.motionlines",
             attributes: engineActive ? [] : [.disabled]
         ) { [weak self] in
             self?.toggleTouchInterfaceMode()
+        }
+        let pointerCapture = action(
+            isPointerCaptureEnabled ? "Release Mouse / Trackpad" : "Capture Mouse / Trackpad",
+            symbol: isPointerCaptureEnabled ? "cursorarrow.rays" : "cursorarrow.motionlines",
+            attributes: engineActive ? [] : [.disabled],
+            state: isPointerCaptureEnabled ? .on : .off
+        ) { [weak self] in
+            self?.togglePointerCaptureEnabled()
         }
 
         let touchMenu = UIMenu(title: "Touch Controls", image: UIImage(systemName: "hand.draw"), children: [
@@ -2247,6 +2690,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             primaryAction,
             unrealMenu,
             touchInterface,
+            pointerCapture,
             touchMenu,
             systemMenu,
             action("Multiplayer…", symbol: "network") { [weak self] in
@@ -2308,13 +2752,37 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
         let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
         if engineActive {
+            stack.addArrangedSubview(hostPanelMessage(
+                originalMenuInputActive
+                    ? "MENU MODE\nMOVE controls the cursor. SELECT chooses. Switch after entering a match."
+                    : "GAMEPLAY MODE\nWASD or MOVE walks. Mouse, trackpad, or the right side looks."
+            ))
             stack.addArrangedSubview(hostPanelButton(
-                originalMenuInputActive ? "USE GAMEPLAY CONTROLS" : "USE MENU CONTROLS",
+                originalMenuInputActive
+                    ? "SWITCH TO GAMEPLAY: MOVE & LOOK"
+                    : "SWITCH TO MENU: CURSOR & SELECT",
                 symbol: originalMenuInputActive ? "gamecontroller.fill" : "cursorarrow.motionlines"
             ) { [weak self] in
                 self?.toggleTouchInterfaceMode()
             })
-            stack.addArrangedSubview(hostPanelButton("ESCAPE / UT MENU", symbol: "escape") { [weak self] in
+            stack.addArrangedSubview(hostPanelButton(
+                isPointerCaptureEnabled ? "RELEASE MOUSE / TRACKPAD" : "CAPTURE MOUSE / TRACKPAD",
+                symbol: isPointerCaptureEnabled ? "cursorarrow.rays" : "cursorarrow.motionlines"
+            ) { [weak self] in
+                self?.togglePointerCaptureEnabled()
+            })
+            if isPointerCaptureEnabled {
+                stack.addArrangedSubview(hostPanelButton(
+                    pointerSensitivityTitle,
+                    symbol: "speedometer"
+                ) { [weak self] in
+                    self?.cyclePointerSensitivity()
+                })
+            }
+            stack.addArrangedSubview(hostPanelButton(
+                originalMenuInputActive ? "ESCAPE / BACK" : "OPEN UT MENU",
+                symbol: "escape"
+            ) { [weak self] in
                 self?.engineBridge.publishTouchAction(.pause, pressed: true)
                 self?.engineBridge.publishTouchAction(.pause, pressed: false)
             })
@@ -2342,19 +2810,34 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 self?.startEngine()
             })
         }
+        let touchControlsVisible = engineActive && isTouchInputEnabled && !controllerAutoHideActive
+        let touchControlTitle: String
+        if engineActive {
+            touchControlTitle = touchControlsVisible ? "HIDE TOUCH CONTROLS" : "SHOW TOUCH CONTROLS"
+        } else {
+            touchControlTitle = isTouchInputEnabled ? "TOUCH CONTROLS: ON" : "TOUCH CONTROLS: OFF"
+        }
         stack.addArrangedSubview(hostPanelButton(
-            isTouchInputEnabled ? "TURN TOUCH CONTROLS OFF" : "TURN TOUCH CONTROLS ON",
-            symbol: isTouchInputEnabled ? "hand.raised.slash" : "hand.raised.fill"
+            touchControlTitle,
+            symbol: touchControlsVisible || (!engineActive && isTouchInputEnabled)
+                ? "hand.raised.slash"
+                : "hand.raised.fill"
         ) { [weak self] in
-            self?.toggleTouchInputEnabled()
+            if engineActive {
+                self?.setTouchInputEnabled(!touchControlsVisible)
+            } else {
+                self?.toggleTouchInputEnabled()
+            }
         })
-        stack.addArrangedSubview(hostPanelButton("ARRANGE CONTROLS", symbol: "move.3d") { [weak self] in
-            self?.editTouchLayout()
-        })
+        if !engineActive || touchControlsVisible {
+            stack.addArrangedSubview(hostPanelButton("ARRANGE TOUCH CONTROLS", symbol: "move.3d") { [weak self] in
+                self?.editTouchLayout()
+            })
+        }
         stack.addArrangedSubview(hostPanelButton("CONTROLS & DISPLAY", symbol: "display") { [weak self] in
             self?.showControlsInfo()
         })
-        stack.addArrangedSubview(hostPanelButton("MULTIPLAYER", symbol: "network") { [weak self] in
+        stack.addArrangedSubview(hostPanelButton("OPEN SERVER BROWSER", symbol: "network") { [weak self] in
             self?.showMultiplayerInfo()
         })
         stack.addArrangedSubview(hostPanelButton("EXPORT LOGS", symbol: "square.and.arrow.up") { [weak self] in
@@ -2388,6 +2871,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         menuButton.accessibilityValue = "Open"
         view.bringSubviewToFront(panel)
         view.bringSubviewToFront(menuButton)
+        updatePointerCapturePreference(reason: "host-menu-opened")
     }
 
     private func showMenuTextKeyboard() {
@@ -2586,6 +3070,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         hostMenuPanel?.removeFromSuperview()
         hostMenuPanel = nil
         menuButton.accessibilityValue = nil
+        updatePointerCapturePreference(reason: "host-menu-closed")
     }
 
     @objc private func showControlsInfo() {
@@ -3613,7 +4098,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         System: \(ProcessInfo.processInfo.operatingSystemVersionString)
         Touch: enabled=\(isTouchInputEnabled) mode=\(originalMenuInputActive ? "menu" : "gameplay") autoHide=\(configuration.autoHideForController)
         Controller: discovered=\(controllers.count) extended=\(extendedControllers.count) responderFallback=\(controllerFallbackConnected) autoHideActive=\(controllerAutoHideActive)
-        Pointer: owner=host-uikit mode=\(originalMenuInputActive ? "menu" : "gameplay") surfaceEnabled=\(gameSurfaceInputView.isUserInteractionEnabled)
+        Keyboard: owner=host-gamecontroller connected=\(GCKeyboard.coalesced != nil) gameplayHeld=\(hardwareGameplayMovementKeyUsages.count)
+        Pointer: owner=host-apple mode=\(originalMenuInputActive ? "menu" : "gameplay") surfaceEnabled=\(gameSurfaceInputView.isUserInteractionEnabled) captureEnabled=\(isPointerCaptureEnabled) captureRequested=\(shouldRequestPointerCapture) captureLocked=\(view.window?.windowScene?.pointerLockState?.isLocked == true) sensitivity=\(String(format: "%.2f", pointerSensitivity)) mice=\(GCMouse.mice().count)
         \(runtimeRecovery.diagnosticSummary())
         """)
         var entries = [("diagnostics.txt", Data(summary.utf8))]
@@ -3670,7 +4156,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             supportRoot.appendingPathComponent("UnrealTournament.log"),
             supportRoot.appendingPathComponent("UT99-touch-smoke.log"),
             supportRoot.appendingPathComponent("UT99-performance.log"),
-            supportRoot.appendingPathComponent("UT99-host-metal-smoke.log")
+            supportRoot.appendingPathComponent("UT99-host-metal-smoke.log"),
+            supportRoot.appendingPathComponent(Self.keyboardInputTraceFileName)
         ]
     }
 
@@ -3713,7 +4200,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     @objc private func resetHostConfiguration() {
         let defaults = UserDefaults.standard
-        ["ut99.input.lookSensitivity", "ut99.input.invertLookY", "ut99.graphics.safeTextures", "ut99.graphics.vsync", "ut99.audio.enabled", "ut99.graphics.frameCap", Self.touchInputEnabledKey, "ut99.touch.opacity", "ut99.touch.scale", "ut99.touch.profile", "ut99.touch.layout", "ut99.touch.layout.v1", UT99TouchConfiguration.defaultsKey, UT99TouchProfileStore.defaultsKey].forEach { defaults.removeObject(forKey: $0) }
+        ["ut99.input.lookSensitivity", "ut99.input.invertLookY", "ut99.graphics.safeTextures", "ut99.graphics.vsync", "ut99.audio.enabled", "ut99.graphics.frameCap", Self.touchInputEnabledKey, Self.pointerCaptureEnabledKey, Self.pointerSensitivityKey, "ut99.touch.opacity", "ut99.touch.scale", "ut99.touch.profile", "ut99.touch.layout", "ut99.touch.layout.v1", UT99TouchConfiguration.defaultsKey, UT99TouchProfileStore.defaultsKey].forEach { defaults.removeObject(forKey: $0) }
         touchOverlay.applyTouchProfile(.standard)
         touchOverlay.resetTouchLayout()
         statusLabel.text = "Host configuration reset"

@@ -114,8 +114,9 @@ rg -Fq 'private final class UT99HostMenuButton: UIButton' Sources/UT99Host/GameV
 rg -Fq 'menuButton.onAccessibilityActivate' Sources/UT99Host/GameViewController.swift
 rg -Fq 'menuButton.showsMenuAsPrimaryAction = false' Sources/UT99Host/GameViewController.swift
 rg -Fq 'private var hostMenuPanel: UIVisualEffectView?' Sources/UT99Host/GameViewController.swift
-rg -Fq '"USE GAMEPLAY CONTROLS" : "USE MENU CONTROLS"' Sources/UT99Host/GameViewController.swift
-rg -Fq 'hostPanelButton("ESCAPE / UT MENU"' Sources/UT99Host/GameViewController.swift
+rg -Fq '"SWITCH TO GAMEPLAY: MOVE & LOOK"' Sources/UT99Host/GameViewController.swift
+rg -Fq '"SWITCH TO MENU: CURSOR & SELECT"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'originalMenuInputActive ? "ESCAPE / BACK" : "OPEN UT MENU"' Sources/UT99Host/GameViewController.swift
 rg -Fq 'keyboardIsOpen ? "CLOSE KEYBOARD" : "OPEN KEYBOARD"' Sources/UT99Host/GameViewController.swift
 rg -Fq 'hostPanelButton("TRY NORMAL START"' Sources/UT99Host/GameViewController.swift
 rg -Fq 'hostPanelButton("START IN SAFE MODE"' Sources/UT99Host/GameViewController.swift
@@ -210,12 +211,38 @@ rg -Fq 'self.presentSDLWindowIfAvailable()' Sources/UT99Host/GameViewController.
 rg -Fq 'gameSurfaceInputView.isHidden = false' Sources/UT99Host/GameViewController.swift
 rg -Fq 'UITouch.TouchType.indirectPointer.rawValue' Sources/UT99Host/GameViewController.swift
 rg -Fq '@objc private func pointerPressed' Sources/UT99Host/GameViewController.swift
+rg -Fq 'override var prefersPointerLocked: Bool { shouldRequestPointerCapture }' Sources/UT99Host/GameViewController.swift
+rg -Fq 'setNeedsUpdateOfPrefersPointerLocked()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'UIPointerLockState.didChangeNotification' Sources/UT99Host/GameViewController.swift
+rg -Fq 'GCMouse.mice()' Sources/UT99Host/GameViewController.swift
+rg -Fq 'input.mouseMovedHandler' Sources/UT99Host/GameViewController.swift
+rg -Fq 'self?.pointerCaptureRoutingActive == true' Sources/UT99Host/GameViewController.swift
+rg -Fq 'CAPTURE MOUSE / TRACKPAD' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private static let pointerSensitivityKey = "ut99.pointer.sensitivity"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private static let pointerSensitivityPresets: [Float] = [0.20, 0.35, 0.50, 0.75, 1.00]' Sources/UT99Host/GameViewController.swift
+rg -Fq '"CHANGE MOUSE / TRACKPAD SPEED · \(Int((pointerSensitivity * 100).rounded()))%"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'if isPointerCaptureEnabled {' Sources/UT99Host/GameViewController.swift
+rg -Fq 'touchControlsVisible ? "HIDE TOUCH CONTROLS" : "SHOW TOUCH CONTROLS"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'if !engineActive || touchControlsVisible {' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("ARRANGE TOUCH CONTROLS"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'hostPanelButton("OPEN SERVER BROWSER"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let menuDelay = originalMenuAlreadyOpen ? 0 : 450' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'UT99 server browser route phase=open-browser' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'let scaledX = deltaX * sensitivity' Sources/UT99Host/GameViewController.swift
+rg -Fq 'let scaledY = deltaY * sensitivity' Sources/UT99Host/GameViewController.swift
+rg -Fq 'releaseCapturedMouseButtons(reason: reason)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'return capturedMouseButtonModes.removeValue(forKey: button)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'return hit === self ? nil : hit' Sources/UT99Host/GoldenPadTouchOverlay.swift
 rg -Fq 'pushMouseMotion(windowID: windowID, x: x, y: y, xrel: 0, yrel: 0)' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'let (window, windowID) = focusedSDLWindow()' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_WarpMouseInWindow' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'write32(windowID, at: 8, into: &event)' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_UT99SendMousePointer' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'func publishHardwareMouseMotion(deltaX: Float, deltaY: Float)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'func publishHardwareMouseButton(button: UInt8, pressed: Bool)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'func publishHardwareMouseWheel(y: Int32)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'hardwareMouseRemainderX += deltaX' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'hardwareMouseQueue.async' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'SDL_UT99SendMousePointer' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'mouse->last_x = window->w * 4' third_party/patches/sdl2-ut99-ios.patch
 rg -Fq 'anchor ? 1 : 0' Sources/UT99Host/UT99EngineBridge.swift
@@ -240,8 +267,11 @@ rg -Fq 'fromByteOffset: 0x1A8' Sources/UT99Host/UT99EngineBridge.swift
 rg -Fq 'private func toggleTouchInterfaceMode()' Sources/UT99Host/GameViewController.swift
 rg -Fq 'private func selectTouchInterfaceMode(menu: Bool)' Sources/UT99Host/GameViewController.swift
 rg -Fq 'Visibility is an independent user choice' Sources/UT99Host/GameViewController.swift
-rg -Fq '"USE GAMEPLAY CONTROLS" : "USE MENU CONTROLS"' Sources/UT99Host/GameViewController.swift
-rg -Fq '"Use Gameplay Touch Controls" : "Use Menu Touch Controls"' Sources/UT99Host/GameViewController.swift
+rg -Fq '"Switch to Gameplay Controls" : "Switch to Menu Controls"' Sources/UT99Host/GameViewController.swift
+rg -Fq '"MENU MODE\nMOVE controls the cursor. SELECT chooses. Switch after entering a match."' Sources/UT99Host/GameViewController.swift
+rg -Fq '"GAMEPLAY MODE\nWASD or MOVE walks. Mouse, trackpad, or the right side looks."' Sources/UT99Host/GameViewController.swift
+rg -Fq '"SWITCH TO GAMEPLAY: MOVE & LOOK"' Sources/UT99Host/GameViewController.swift
+rg -Fq '"SWITCH TO MENU: CURSOR & SELECT"' Sources/UT99Host/GameViewController.swift
 if rg -Fq 'synchronizeInputModeFromViewport' Sources/UT99Host; then
     echo "Touch interface mode must be changed explicitly from the host menu" >&2
     exit 1
@@ -346,7 +376,7 @@ rg -Fq 'responderFallback=%@' Sources/UT99Host/GameViewController.swift
 rg -Fq 'pointerMode=%@ pointerSurface=%@' Sources/UT99Host/GameViewController.swift
 rg -Fq 'UT99 controller sample kind=%@' Sources/UT99Host/GameViewController.swift
 rg -Fq 'Controller: discovered=\(controllers.count) extended=\(extendedControllers.count)' Sources/UT99Host/GameViewController.swift
-rg -Fq 'Pointer: owner=host-uikit mode=' Sources/UT99Host/GameViewController.swift
+rg -Fq 'Pointer: owner=host-apple mode=' Sources/UT99Host/GameViewController.swift
 rg -Fq 'clearControllerFallbackPresses(reason: "release-gameplay-inputs", rearmMenuCursor: false)' Sources/UT99Host/GameViewController.swift
 if rg -Fq 'UT99KeyboardBridge text=%@' Sources/UT99Host/GameViewController.swift; then
     echo "Raw text must not be written to diagnostics" >&2
@@ -382,6 +412,29 @@ rg -Fq 'func publishExternalMenuPointer(location: CGPoint' Sources/UT99Host/UT99
 rg -Fq '<key>CFBundleDisplayName</key><string>UTP</string>' Sources/UT99Host/Info.plist
 rg -Fq 'ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon' UT99Apple.xcodeproj/project.pbxproj
 rg -Fq 'usage <= UIKeyboardHIDUsage.keyboardZ.rawValue' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'private static let gameplayMovementKeyUsages: Set<Int>' Sources/UT99Host/GameViewController.swift
+rg -Fq 'else if !originalMenuInputActive,' Sources/UT99Host/GameViewController.swift
+rg -Fq 'GCKeyboard.coalesced' Sources/UT99Host/GameViewController.swift
+rg -Fq 'forName: .GCKeyboardDidConnect' Sources/UT99Host/GameViewController.swift
+rg -Fq 'forName: .GCKeyboardDidDisconnect' Sources/UT99Host/GameViewController.swift
+rg -Fq 'input.keyChangedHandler' Sources/UT99Host/GameViewController.swift
+rg -Fq 'keyboard.handlerQueue = controllerMonitorQueue' Sources/UT99Host/GameViewController.swift
+rg -Fq 'source: "gckeyboard"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'owner=host-gamecontroller' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private static let keyboardInputTraceFileName = "UT99-keyboard-input.log"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'private static let keyboardInputTraceEventLimit = 512' Sources/UT99Host/GameViewController.swift
+rg -Fq 'configureKeyboard(keyboard, reason: "pointer-capture-toggled")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'configureKeyboard(keyboard, reason: active ? "menu-mode-selected" : "gameplay-mode-selected")' Sources/UT99Host/GameViewController.swift
+rg -Fq 'repeating: .milliseconds(16)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'input.button(forKeyCode: GCKeyCode(rawValue: usage))?.isPressed == true' Sources/UT99Host/GameViewController.swift
+rg -Fq 'source: "gckeyboard-poll"' Sources/UT99Host/GameViewController.swift
+rg -Fq 'supportRoot.appendingPathComponent(Self.keyboardInputTraceFileName)' Sources/UT99Host/GameViewController.swift
+rg -Fq 'func publishGameplayMovementKey(usage: Int, pressed: Bool)' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'case UIKeyboardHIDUsage.keyboardW.rawValue: key = (1 << 30) | 82' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'case UIKeyboardHIDUsage.keyboardS.rawValue: key = (1 << 30) | 81' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'case UIKeyboardHIDUsage.keyboardA.rawValue: key = (1 << 30) | 80' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'case UIKeyboardHIDUsage.keyboardD.rawValue: key = (1 << 30) | 79' Sources/UT99Host/UT99EngineBridge.swift
+rg -Fq 'releaseHardwareGameplayMovementKeys(reason: "input-mode-changed")' Sources/UT99Host/GameViewController.swift
 if rg -Fq 'menuPointerView' Sources/UT99Host; then
     echo "Host targeting circle returned; menus must draw only UWindow's stock cursor" >&2
     exit 1

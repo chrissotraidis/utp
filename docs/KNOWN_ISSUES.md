@@ -1,5 +1,45 @@
 # Known issues and technical debt
 
+## Launch-thread feedback reconciliation — 2026-08-30
+
+The actionable requests and defects raised in the launch thread are classified
+below. A listed request is not a promise that it belongs in the next preview.
+
+- **On-screen controls:** implemented and physically usable on iPhone and iPad.
+  Discoverability remains imperfect because touch has explicit Menu and Gameplay
+  modes; the three-dot panel must clearly state the current mode and what MOVE,
+  SELECT, and the right-side surface do before and after switching.
+- **Keyboard plus trackpad or mouse:** physically accepted as one gameplay-grade
+  path on 2026-08-31. A trackpad and a mouse are the same pointer class here.
+  In explicit Gameplay mode, held WASD, captured relative look, pointer buttons,
+  and a higher persistent speed preset worked in Oblivion while the connected
+  controller also remained usable. Menu-mode hardware text entry was preserved.
+  The original combined-input, WASD, raw-sensitivity, and duplicate-pointer
+  defects are closed. Wheel/scroll was not separately narrated and remains a
+  narrow validation gap rather than a reason to reopen the accepted defect.
+- **Three-dot panel conditionality:** the accepted input build exposed stored
+  settings instead of visible state: it offered to turn touch off while a
+  controller had already auto-hidden it, exposed Arrange for hidden controls,
+  and always showed pointer speed. The follow-up uses actual Show/Hide wording,
+  hides Arrange until touch is visible, and shows speed only when capture is on.
+  The same physical run found that **Multiplayer** reached UMenu but not the
+  server browser. The accepted follow-up renames the action **Open Server
+  Browser** and slows/instruments the stock navigation route.
+- **Controller breadth:** Xbox startup and hot-connect are physically accepted.
+  UTP targets extended GameController profiles, but DualShock 4/PS4 control is an
+  explicit hardware-matrix gap until it is exercised in UTP; do not generalize
+  the Xbox result to “all controllers.”
+- **Small original-menu text and square/incorrect shadow or alpha effects:** both
+  are already open defects below. Native Retina output does not resolve the
+  stock UWindow scaling limitation.
+- **iOS 15 and iOS 16 requests:** the current binary deliberately targets iOS and
+  iPadOS 17 or later. Lowering the deployment target is unproven compatibility
+  expansion, not a supported-runtime repair. The reported iOS 16.6.1 launch
+  failure is therefore not evidence of a regression on the supported target.
+- **Installation and App Store availability:** the unsigned sideloading flow is
+  documented. TestFlight, App Store, and website distribution remain separate
+  permission, review, privacy, and release-operations work.
+
 ## Preview 1 physical-device debt — 2026-08-26
 
 - Keyboard text entry is physically accepted on the 2026-08-27 iPad candidate. Both the attached hardware keyboard and UTP's virtual keyboard edited the real Player Name field, including Delete and printable characters. The accepted implementation must retain the stock `UWindowEditBox` ordering requirement: matching KeyDown, then TextInput, then KeyUp. Controller work must not modify this path.
@@ -25,7 +65,7 @@ live three-dot panel; it does not change input behavior.
 - Physical iPad gameplay now runs with working audio and usable touch combat, but the original UWindow text remains very small even at the staged v469e maximum GUI scale. FruCoRe also renders some in-game shadows incorrectly. Both are visible defects; neither is treated as fixed by host-side menu improvements.
 - Physical iPad menu validation found an affine mismatch between the UIKit touch indicator and the original UWindow cursor: both aligned around the top Options-menu anchor, while UWindow magnified displacement by roughly 2× elsewhere. The current candidate applies the measured inverse transform and requires a fresh physical corner-to-corner/click acceptance pass.
 - An earlier candidate did not enumerate the Xbox Wireless Controller. The `GCEventViewController` host and foreground-discovery repairs now deliver native Xbox input and auto-hide touch controls after physical hot-connect.
-- The iOS/Xcode target and engine host remain work in progress. The original renderer, audio, offline match flow, touch combat, keyboard entry, and native Xbox controller path now run on the attached physical iPad; original-menu pointer precision, fine text readability, shadow fidelity, and broader lifecycle/performance acceptance remain open.
+- The iOS/Xcode target and engine host remain work in progress. The original renderer, audio, offline match flow, touch combat, keyboard entry, Gameplay WASD, captured pointer look/buttons, adjustable pointer speed, and native Xbox controller path now run on the attached physical iPad; fine text readability, shadow fidelity, wheel behavior, and broader lifecycle/performance acceptance remain open.
 - The prior GoldenPad rail is superseded. The host now contains a reference-derived UIKit overlay with measured iPad sizing, a dedicated phone adaptation, fixed movement/aim sticks, non-overlapping UT-specific FIRE/ALT/JUMP/DUCK/aim targets, a four-way utility D-pad, original Unreal MENU, separate host menu, and a drag/pinch/reset/live-test editor. Movement and aim explicitly opt into simultaneous recognition; editor gestures remain exclusive. Handedness, hidden actions, acceleration, dead zones, controller auto-hide, and versioned named `.ut99touch` profiles persist. Assistive FIRE and packaged Simulator Movement/Aim actions work against the live engine loop; genuine simultaneous physical thumbs, physical VoiceOver traversal/speech, haptics, reach, editor persistence, and touch-only match completion on hardware remain unproven.
 - The app supports both landscape sides, requests a generic landscape geometry only from portrait, declares a modern launch screen, and receives the native 1180×820 iPad Air canvas. SDL/FruCoRe now negotiates a 2360×1640 Retina drawable at 2× and fills the landscape device beneath the overlay. Simulator iteration fixed a fixed-side 180-degree relaunch, but physical rotation, touch-only gameplay, device safe areas, frame pacing, thermals, and memory remain unproven.
 - The three-dot importer accepts either a user-owned folder or ZIP archive, validates safe content paths, rejects desktop executables/encrypted entries, supports stored/raw-deflate entries, prepares on a background queue, reports phase/current-file/count progress, and offers cooperative cancellation before its journaled install boundary. Deterministic tests prove cancellation during preparation and streaming hash work preserves the installed manifest/content without debris. A single raw-deflate ZIP entry still uses a one-shot inflater, so cancellation is observed between entries rather than within one large entry. Physical-device Files providers, low-disk behavior, and real cancellation latency remain untested.
@@ -35,7 +75,7 @@ live three-dot panel; it does not change input behavior.
 - The complete schema-v2 audit now covers all eight recursively discovered Mach-O images and classifies every imported dependency edge, so G1 static feasibility passes. This does not prove that the transformed image, rebuilt dependencies, or narrow shims execute correctly on physical iOS hardware.
 - A trusted physical iPad and development signing path are now available and have been used for repeated in-place builds. Install/launch/PID proof and the hands-on gameplay/audio observations above do not by themselves establish controller, pointer accuracy, lifecycle, thermals, memory pressure, or long-session acceptance.
 - First-run game-data acquisition is implemented and passes Simulator UI plus exact-image extraction tests, but a physical 620 MiB download, low-storage behavior, cancellation across network loss/backgrounding, and first-launch map decompression still require device acceptance. The app contains no ISO/game data; permission to enable the direct download in a publicly distributed binary remains separate from technical readiness.
-- Native GameController extended-gamepad bindings, UIKit hardware-key forwarding for the stock UT99 symbols, UIKit pointer-hover relative aiming, and AVAudioSession interruption/route handling are present. Physical audio, Xbox-at-launch and hot-connect gameplay, and hardware/host keyboard text are working. Physical mouse/trackpad precision and complete button/wheel semantics remain open. A clean opt-in simulator audio run reaches OpenAL, logs UT music playback, and holds at zero sound-buffer allocation failures with all audio sections normalized to 16 effect channels; the default simulator diagnostic remains silent.
+- Native GameController extended-gamepad bindings, UIKit hardware-key forwarding for stock UT99 symbols, captured GameController mouse/trackpad input, and AVAudioSession interruption/route handling are present. Physical audio, Xbox-at-launch/hot-connect gameplay, hardware/host keyboard text, Gameplay WASD, captured pointer look/buttons, adjustable speed, and simultaneous controller input are working. Wheel semantics remain open. A clean opt-in simulator audio run reaches OpenAL, logs UT music playback, and holds at zero sound-buffer allocation failures with all audio sections normalized to 16 effect channels; the default simulator diagnostic remains silent.
 - A live public server handshake and stock-map session pass on the simulator. The Metal shim now expands BC1/DXT1 descriptors and uploads to RGBA8, and a current `ut99.weba.ru:7777` session reached map download, login, and possession on `DM-Agear` with the fallback installed. The historically failing `DM-Unreality][` package was not selected in that run, so broad custom-server BC1 compatibility and physical-device behavior remain unproven.
 - The original v469e Internet browser now accepts point-accurate logical SDL input in Simulator: `UT Servers` selects, the original table visibly lists 775 servers, and master/server traffic is captured. Browser-selected joining passes, while a separate direct-connect session now proves extended play, respawn, natural map transition, and stock-menu disconnect. Physical finger/device networking, observer-confirmed chat, and one uninterrupted physical G8 run remain open.
 - The controller semantic mapping covers shoulder PREV/NEXT weapon actions, Xbox View/Select as the explicit Menu/Gameplay control-mode switch, and Xbox Menu as the original Unreal Escape/menu command. Menu/gameplay switching and core Oblivion control are physically accepted on the current iPad candidate.
