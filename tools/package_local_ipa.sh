@@ -5,6 +5,12 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 mode="${UT99_PACKAGE_MODE:-signed}"
+minimum_os="${UT99_IOS_MIN:-17.0}"
+ios_sdk="${UT99_IOS_SDK:-$(xcrun --sdk iphoneos --show-sdk-version)}"
+[[ "$minimum_os" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || {
+  echo "package_local=blocked reason=invalid_minimum_ios_version" >&2
+  exit 2
+}
 case "$mode" in
   signed|public|diagnostic) ;;
   *) echo "package_local=blocked reason=invalid_mode expected=signed_public_or_diagnostic" >&2; exit 2 ;;
@@ -18,7 +24,7 @@ if [[ "$mode" != "diagnostic" && -z "$team" ]]; then
 fi
 
 ./tools/ensure_single_runtime.sh --clean
-make ios-engine-real-artifact
+UT99_IOS_MIN="$minimum_os" UT99_IOS_SDK="$ios_sdk" make ios-engine-real-artifact
 
 output_dir="build/local-package"
 mkdir -p "$output_dir"
@@ -36,6 +42,7 @@ if [[ "$mode" == "signed" || "$mode" == "public" ]]; then
     CODE_SIGNING_ALLOWED=YES \
     CODE_SIGN_STYLE=Automatic \
     DEVELOPMENT_TEAM="$team" \
+    IPHONEOS_DEPLOYMENT_TARGET="$minimum_os" \
     clean build
   app="$derived_data/Build/Products/Release-iphoneos/UT99Apple.app"
   if [[ "$mode" == "public" ]]; then
@@ -62,6 +69,7 @@ else
     -destination "generic/platform=iOS" \
     -derivedDataPath "$derived_data" \
     CODE_SIGNING_ALLOWED=NO \
+    IPHONEOS_DEPLOYMENT_TARGET="$minimum_os" \
     clean build
   app="$derived_data/Build/Products/Release-iphoneos/UT99Apple.app"
   codesign --force --deep --sign - "$app" >/dev/null
@@ -70,7 +78,7 @@ else
   re_signable=false
 fi
 
-./tools/verify_ios_package.sh "$app"
+UT99_IOS_MIN="$minimum_os" ./tools/verify_ios_package.sh "$app"
 
 if [[ -d "$app/UT99Data" ]]; then
   echo "package_local=failed reason=user_game_data_embedded" >&2
@@ -108,6 +116,10 @@ if [[ "$mode" == "public" ]]; then
     fi
   done < <(find "$stage/Payload/UT99Apple.app" -type f -print0)
 fi
+
+# ZIP records filesystem modification times even with -X. Normalize the staged
+# tree so repeated builds from the same source commit produce identical IPAs.
+find "$stage" -exec touch -h -t 200101010000 {} +
 rm -f "$ipa"
 (cd "$stage" && /usr/bin/zip -X -q -r "$root/$ipa" Payload)
 unzip -t "$ipa" >"$output_dir/unzip-${mode}.txt"
@@ -159,6 +171,7 @@ jq -n \
   --arg mode "$mode" \
   --arg bundle_id "$bundle_id" \
   --arg git_commit "$git_commit" \
+  --arg minimum_ios_version "$minimum_os" \
   --arg app_binary_sha256 "$app_binary_sha" \
   --arg engine_sha256 "$engine_sha" \
   --arg ipa_sha256 "$ipa_sha" \
@@ -168,6 +181,7 @@ jq -n \
   '{schema_version:1, mode:$mode, installable_on_stock_ios:$installable,
     re_signable:$re_signable,
     bundle_identifier:$bundle_id, git_commit:$git_commit,
+    minimum_ios_version:$minimum_ios_version,
     contains_user_game_data:false, runtime_jit_required:false,
     app_binary_sha256:$app_binary_sha256, engine_sha256:$engine_sha256,
     ipa_sha256:$ipa_sha256, ipa:$ipa}' >"$manifest"

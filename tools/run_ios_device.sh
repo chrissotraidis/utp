@@ -5,6 +5,12 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 mode="${1:---check}"
+minimum_os="${UT99_IOS_MIN:-17.0}"
+ios_sdk="${UT99_IOS_SDK:-$(xcrun --sdk iphoneos --show-sdk-version)}"
+[[ "$minimum_os" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || {
+  echo "device_readiness=blocked reason=invalid_minimum_ios_version" >&2
+  exit 2
+}
 case "$mode" in
   --check|--build|--install|--run) ;;
   *) echo "Usage: $0 [--check|--build|--install|--run]" >&2; exit 2 ;;
@@ -59,7 +65,7 @@ echo "device_readiness=ready physical_ios_ipados_devices=$device_count signing_i
 [[ "$mode" == "--check" ]] && exit 0
 
 ./tools/ensure_single_runtime.sh --clean
-make ios-engine-real-artifact
+UT99_IOS_MIN="$minimum_os" UT99_IOS_SDK="$ios_sdk" make ios-engine-real-artifact
 
 derived_data="build/ios-device-app"
 app="$derived_data/Build/Products/Debug-iphoneos/UT99Apple.app"
@@ -82,9 +88,10 @@ UT99_ENGINE_EMBED=1 xcodebuild \
   CODE_SIGNING_ALLOWED=YES \
   CODE_SIGN_STYLE=Automatic \
   DEVELOPMENT_TEAM="$team" \
+  IPHONEOS_DEPLOYMENT_TARGET="$minimum_os" \
   "${xcode_actions[@]}"
 
-./tools/verify_ios_package.sh "$app"
+UT99_IOS_MIN="$minimum_os" ./tools/verify_ios_package.sh "$app"
 echo "device_build=$app"
 [[ "$mode" == "--build" ]] && exit 0
 

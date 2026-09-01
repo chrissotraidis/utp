@@ -4,10 +4,17 @@ set -euo pipefail
 source_metallib="${1:?usage: build_ios_frucore_metallib.sh source.metallib output.metallib [ios|iossim]}"
 output_metallib="${2:?usage: build_ios_frucore_metallib.sh source.metallib output.metallib [ios|iossim]}"
 platform="${3:-iossim}"
+minimum_os="${UT99_IOS_MIN:-17.0}"
+[[ "$minimum_os" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || {
+  echo "invalid UT99_IOS_MIN: $minimum_os" >&2
+  exit 2
+}
+minimum_triple="$minimum_os"
+[[ "$minimum_triple" == *.*.* ]] || minimum_triple="$minimum_triple.0"
 
 case "$platform" in
-  ios) target_triple="air64_v26-apple-ios17.0.0" ;;
-  iossim) target_triple="air64_v26-apple-ios17.0.0-simulator" ;;
+  ios) target_triple="air64_v26-apple-ios$minimum_triple" ;;
+  iossim) target_triple="air64_v26-apple-ios$minimum_triple-simulator" ;;
   *) echo "unsupported Metal platform: $platform" >&2; exit 2 ;;
 esac
 export target_triple

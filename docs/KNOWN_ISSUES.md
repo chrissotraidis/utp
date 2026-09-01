@@ -32,10 +32,12 @@ below. A listed request is not a promise that it belongs in the next preview.
 - **Small original-menu text and square/incorrect shadow or alpha effects:** both
   are already open defects below. Native Retina output does not resolve the
   stock UWindow scaling limitation.
-- **iOS 15 and iOS 16 requests:** the current binary deliberately targets iOS and
-  iPadOS 17 or later. Lowering the deployment target is unproven compatibility
-  expansion, not a supported-runtime repair. The reported iOS 16.6.1 launch
-  failure is therefore not evidence of a regression on the supported target.
+- **iOS 15 and iOS 16 requests:** Preview 3 deliberately targets iOS and iPadOS
+  17 or later. Issue #6 has an isolated iOS 15 compatibility candidate whose
+  host, engine, dependencies, and Metal library pass build-time minimum-version
+  audits. It is not a supported-runtime expansion until an iOS 15 tester proves
+  installation, launch, rendering, audio, input, lifecycle, and game-data paths
+  on physical hardware. Preview 3 and the default build remain unchanged.
 - **Installation and App Store availability:** the unsigned sideloading flow is
   documented. TestFlight, App Store, and website distribution remain separate
   permission, review, privacy, and release-operations work.

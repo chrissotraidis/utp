@@ -30,7 +30,10 @@ rg -q 'reason=local_build_path_archived' tools/package_local_ipa.sh
 rg -q -- '-ffile-prefix-map=' Makefile
 rg -q 'contains_user_game_data:false' tools/package_local_ipa.sh
 rg -q 'runtime_jit_required:false' tools/package_local_ipa.sh
+rg -q 'minimum_ios_version:\$minimum_ios_version' tools/package_local_ipa.sh
+rg -q 'verify_ios_minimum_versions\.py' tools/verify_ios_package.sh
 rg -q 'zip -X -q -r' tools/package_local_ipa.sh
+rg -Fq 'touch -h -t 200101010000' tools/package_local_ipa.sh
 rg -q 'reason=mac_metadata_archived' tools/package_local_ipa.sh
 rg -q 'unavailable iOS AudioUnit runtime dependency' tools/verify_ios_package.sh
 rg -q 'AudioToolbox' tools/verify_ios_package.sh

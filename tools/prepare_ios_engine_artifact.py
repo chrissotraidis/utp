@@ -14,6 +14,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -80,14 +82,19 @@ def main() -> int:
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
-    parser.add_argument("--ios-min", default="17.0")
-    parser.add_argument("--ios-sdk", default="26.5")
+    parser.add_argument("--ios-min", default=os.environ.get("UT99_IOS_MIN", "17.0"))
+    parser.add_argument("--ios-sdk", default=os.environ.get("UT99_IOS_SDK", "26.5"))
     parser.add_argument("--platform", choices=("ios", "iossim"), default="ios")
     parser.add_argument("--shim", type=Path)
     parser.add_argument("--available", type=Path, action="append", default=[])
     parser.add_argument("--fmod-stub", action="store_true")
     parser.add_argument("--allow-unsupported", action="store_true")
     args = parser.parse_args()
+
+    if not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", args.ios_min):
+        raise SystemExit(f"invalid iOS minimum version: {args.ios_min}")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", args.ios_sdk):
+        raise SystemExit(f"invalid iOS SDK version: {args.ios_sdk}")
 
     if not args.source.is_file():
         raise SystemExit(f"source does not exist: {args.source}")

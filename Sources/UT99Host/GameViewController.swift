@@ -372,10 +372,17 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private func requestLandscapeGeometryIfNeeded() {
         guard let scene = view.window?.windowScene,
               !scene.interfaceOrientation.isLandscape else { return }
-        setNeedsUpdateOfSupportedInterfaceOrientations()
-        let preferences = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: .landscape)
-        scene.requestGeometryUpdate(preferences) { error in
-            NSLog("UT99 landscape geometry request failed: %@", error.localizedDescription)
+        if #available(iOS 16.0, *) {
+            setNeedsUpdateOfSupportedInterfaceOrientations()
+            let preferences = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: .landscape)
+            scene.requestGeometryUpdate(preferences) { error in
+                NSLog("UT99 landscape geometry request failed: %@", error.localizedDescription)
+            }
+        } else {
+            // iOS 15 honors the landscape-only Info.plist and controller masks.
+            // Ask the legacy rotation coordinator to reconcile a scene that
+            // nevertheless became active in portrait before SDL attached.
+            UIViewController.attemptRotationToDeviceOrientation()
         }
         NSLog("UT99 requested landscape scene geometry from orientation=%ld",
               Int(scene.interfaceOrientation.rawValue))

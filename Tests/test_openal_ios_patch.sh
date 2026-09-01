@@ -7,7 +7,7 @@ cd "$root"
 patch_file="third_party/patches/openal-soft-ios-aligned-allocation.patch"
 test -f "$patch_file"
 rg -q 'TARGET_OS_OSX.*MAC_OS_X_VERSION_MIN_REQUIRED' "$patch_file"
-rg -q 'openal_source="build/sources/openal-soft-ios"' tools/build_ios_dependencies.sh
+rg -q 'openal_source="build/sources/openal-soft-\$suffix-\$minimum_tag"' tools/build_ios_dependencies.sh
 rg -q 'cmake -S "\$openal_source"' tools/build_ios_dependencies.sh
 rg -q 'engine_dir="build/ios-engine"' tools/build_ios_dependencies.sh
 

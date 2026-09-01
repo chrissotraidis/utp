@@ -11,6 +11,7 @@ for target in "${required[@]}"; do
     exit 1
   }
 done
+grep -Eq '^ios15-experimental-package:' Makefile
 
 bash -n tools/bootstrap_dependencies.sh
 bash -n tools/prepare_mac_baseline.sh

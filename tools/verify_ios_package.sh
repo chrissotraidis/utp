@@ -3,10 +3,12 @@ set -euo pipefail
 
 app="${1:?usage: verify_ios_package.sh path/to/UT99Apple.app}"
 frameworks="$app/Frameworks"
+minimum_os="${UT99_IOS_MIN:-17.0}"
 
 [[ -d "$app" && -d "$frameworks" ]] || { echo "missing app/frameworks directory" >&2; exit 2; }
 codesign --verify --deep --strict "$app"
 [[ -s "$app/default.metallib" ]] || { echo "missing embedded FruCoRe shader: default.metallib" >&2; exit 9; }
+python3 "$(dirname "$0")/verify_ios_minimum_versions.py" --app "$app" --expected "$minimum_os"
 
 font_support="$app/UT99FontSupport"
 while read -r expected name; do
