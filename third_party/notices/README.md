@@ -1,0 +1,40 @@
+# Preview 3 font notices
+
+These entries are transcribed from the name-table copyright, version, and license
+metadata of the exact fonts in the inspected Preview 3 IPA. Font bytes match the
+hashes in `tools/verify_ios_package.sh`. No font files are added to the repository.
+The original fonts retain their own terms; these licenses do not apply to UTP as
+a whole. These files supplement the repository; they have not been inserted into
+or attached to the already published IPA.
+
+### Tinos-Regular.ttf
+
+Digitized data copyright (c) 2010-2012 Google Corporation.
+
+Version 1.23. SHA-256: `ff4deb395ff2426bbd08db74cb005b22326175df00f0a156b87e6d2aef1ef508`.
+
+Apache License 2.0; see [full license](Apache-2.0.txt).
+
+### CourierPrime.ttf
+
+Copyright (c) 2013 Quote-Unquote Apps.
+
+Version 1.203. SHA-256: `6cc9525b1334047445cba53f323e810331acfdf59f18f4008397d13137737b91`.
+
+SIL Open Font License 1.1; see [the extracted copyright and full license](CourierPrime-OFL-1.1.txt).
+
+### OpenSans-Regular.ttf
+
+Digitized data copyright © 2010-2011, Google Corporation.
+
+Version 1.10. SHA-256: `037236ed4bf58a85f67074c165d308260fd6be01c86d7df4e79ea16eb273f8c5`.
+
+Apache License 2.0; see [full license](Apache-2.0.txt).
+
+## Distribution follow-up
+
+Include these notices and license texts with future font distributions. Verify
+whether any additional upstream NOTICE material applies to these versions.
+This font inventory does not establish compliance for the engine, FMOD, or other
+libraries. Existing Preview 3 delivery must be assessed separately; no archive
+has been silently replaced.
