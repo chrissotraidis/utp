@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package verified font notices and an inventory without copying app/game bytes."""
+"""Package verified font notices, pinned upstream notices, and an inventory without copying app/game bytes."""
 import argparse
 import hashlib
 import json
@@ -16,6 +16,23 @@ NOTICE_FILES = (
     "third_party/notices/README.md",
     "third_party/notices/Apache-2.0.txt",
     "third_party/notices/CourierPrime-OFL-1.1.txt",
+    'third_party/notices/libraries/README.md',
+    'third_party/notices/libraries/provenance.json',
+    'third_party/notices/OldUnreal-v469e/README.md',
+    'third_party/notices/OldUnreal-v469e/LICENSE.md',
+    'third_party/notices/libraries/SDL2/LICENSE.txt',
+    'third_party/notices/libraries/OpenAL-Soft/COPYING',
+    'third_party/notices/libraries/OpenAL-Soft/LICENSE-pffft',
+    'third_party/notices/libraries/OpenAL-Soft/LICENSE.Apache-2.0.txt',
+    'third_party/notices/libraries/OpenAL-Soft/LICENSE.BSD-3-Clause.txt',
+    'third_party/notices/libraries/OpenAL-Soft/fmt-11.2.0/LICENSE',
+    'third_party/notices/libraries/OpenAL-Soft/gsl/LICENSE',
+    'third_party/notices/libraries/mpg123/COPYING',
+    'third_party/notices/libraries/mpg123/AUTHORS',
+    'third_party/notices/libraries/libsndfile/COPYING',
+    'third_party/notices/libraries/libsndfile/src/ALAC/LICENSE',
+    'third_party/notices/libraries/libxmp/docs/COPYING',
+    'third_party/notices/libraries/libxmp/src/loaders/prowizard/LICENSE.txt',
 )
 
 
@@ -52,7 +69,7 @@ def package(ipa, output, root, source_commit):
         "ipa_sha256": sha256(ipa.read_bytes()),
         "ipa_bytes": ipa.stat().st_size,
         "review_source_commit": source_commit,
-        "scope": "Archive inventory and verified font notices only; not complete Corresponding Source or rights clearance.",
+        "scope": "Archive inventory, verified font notices and pinned upstream notices; not complete Corresponding Source or rights clearance.",
         "members": sorted(records, key=lambda item: item["path"]),
         "notice_sha256": {name: sha256(data) for name, data in notices.items()},
         "remaining_review": [
@@ -64,8 +81,10 @@ def package(ipa, output, root, source_commit):
     readme = """# UTP package review supplement
 
 This companion belongs to the IPA identified by the SHA-256 in manifest.json.
-It contains an exact archive inventory and the notices for the three verified
-font versions. It contains no executable, font binary, game data, credentials,
+It contains an exact archive inventory, notices for the three verified
+font versions, and upstream notice copies from pinned library/OldUnreal inputs.
+The OldUnreal collection covers multiple platforms and does not establish that
+every listed component ships in this app. It contains no executable, font binary, game data, credentials,
 or signing material. Member hashes identify contents; they do not license them.
 
 This is partial review material, not a complete license/source supplement or a

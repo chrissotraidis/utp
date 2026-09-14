@@ -1,0 +1,96 @@
+{
+  "scope": "Exact pinned source notices; not independently matched to the shipped binary. Nested notices are retained conservatively, not a claim all nested code ships.",
+  "files": [
+    {
+      "path": "third_party/notices/libraries/SDL2/LICENSE.txt",
+      "sha256": "97f35b302b361680ec1e891e95d2d52097bb95abff361434916d99dc1305f127",
+      "url": "https://github.com/libsdl-org/SDL",
+      "commit": "5d249570393f7a37e037abf22cd6012a4cc56a71",
+      "upstream_path": "LICENSE.txt"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/COPYING",
+      "sha256": "d808ce217e5b611854da622b57ec29fe545584c48bc5352fae72a4b6e5074a15",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "COPYING"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/LICENSE-pffft",
+      "sha256": "64056328b3e7bc104e24ef96accc1a7abead156f0c02d1b87c97e3f3a28030de",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "LICENSE-pffft"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/LICENSE.Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "LICENSE.Apache-2.0.txt"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/LICENSE.BSD-3-Clause.txt",
+      "sha256": "b5a08cf98996dd83aa906a72c163600f6cb17a65ce546a553815a1267abd43ff",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "LICENSE.BSD-3-Clause.txt"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/fmt-11.2.0/LICENSE",
+      "sha256": "07580f2a3b35709ce703d523f447b242f6dfec7582a8c0df102c7fa2849375f8",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "fmt-11.2.0/LICENSE"
+    },
+    {
+      "path": "third_party/notices/libraries/OpenAL-Soft/gsl/LICENSE",
+      "sha256": "4c21dc82a1c7186ea754fd59d504c00947953a3401fe8e24eaa44109ef8e2555",
+      "url": "https://github.com/kcat/openal-soft",
+      "commit": "2dc741b54a49fc6a7716afd1504ca1056cff7db4",
+      "upstream_path": "gsl/LICENSE"
+    },
+    {
+      "path": "third_party/notices/libraries/mpg123/COPYING",
+      "sha256": "c22482728a634a8dfdb4ff72a96d4c1ed64cd8f3e79335c401751ac591609366",
+      "url": "https://www.mpg123.de/",
+      "archive_sha256": "929a7c18ba662b8927aed4de229ad9ae8ab2b4806dd0f30b90113eb1b4e2195a",
+      "upstream_path": "COPYING"
+    },
+    {
+      "path": "third_party/notices/libraries/mpg123/AUTHORS",
+      "sha256": "fb18c9abae864a20f691e949e4c7871c79f5f0861b3a3dcaf5881c3c02cf5cc2",
+      "url": "https://www.mpg123.de/",
+      "archive_sha256": "929a7c18ba662b8927aed4de229ad9ae8ab2b4806dd0f30b90113eb1b4e2195a",
+      "upstream_path": "AUTHORS"
+    },
+    {
+      "path": "third_party/notices/libraries/libsndfile/COPYING",
+      "sha256": "ad01ea5cd2755f6048383c8d54c88459cd6fcb17757c5c8892f8c5ea060f6140",
+      "url": "https://github.com/libsndfile/libsndfile",
+      "commit": "7ff854d1e0bd9a751a9ff52ed980c62afced91fe",
+      "upstream_path": "COPYING"
+    },
+    {
+      "path": "third_party/notices/libraries/libsndfile/src/ALAC/LICENSE",
+      "sha256": "232efbd83786e157286b0b96c68ebb673541b69b33036287bf1e5ec5067a49d9",
+      "url": "https://github.com/libsndfile/libsndfile",
+      "commit": "7ff854d1e0bd9a751a9ff52ed980c62afced91fe",
+      "upstream_path": "src/ALAC/LICENSE"
+    },
+    {
+      "path": "third_party/notices/libraries/libxmp/docs/COPYING",
+      "sha256": "caa07d94f957b93108e599508d39dbe763cf32e29b75970ff08de66b1a8d1996",
+      "url": "https://github.com/libxmp/libxmp",
+      "commit": "a13276d27feabcf9ee4f982913f718ee05a65cb7",
+      "upstream_path": "docs/COPYING"
+    },
+    {
+      "path": "third_party/notices/libraries/libxmp/src/loaders/prowizard/LICENSE.txt",
+      "sha256": "325fab6e50e97cbad6d8fbf475592da5732c5b38b01d71905002029a44bb51ad",
+      "url": "https://github.com/libxmp/libxmp",
+      "commit": "a13276d27feabcf9ee4f982913f718ee05a65cb7",
+      "upstream_path": "src/loaders/prowizard/LICENSE.txt"
+    }
+  ]
+}

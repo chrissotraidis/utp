@@ -125,3 +125,27 @@ Check existing in-game credits before adding a duplicate credit. Current FMOD
 Studio-specific branding instructions should not be imposed on this runtime
 without confirming applicability. No income or license violation is inferred
 from the presence of a support link or from this review.
+
+## Prepared extended notices and exact FMOD version
+
+The original, hash-matched macOS DMG contains a multi-platform `LICENSE.md` that
+was not retained in the extracted baseline. An unchanged copy is now staged in
+[OldUnreal-v469e notices](../third_party/notices/OldUnreal-v469e/README.md).
+This is a notice collection, not a discovered engine/FMOD license grant.
+
+[Library notices](../third_party/notices/libraries/README.md) were extracted from
+the exact pinned SDL2, OpenAL Soft, libsndfile and libxmp Git objects and the
+hash-matched mpg123 source archive. Their provenance manifest records checksums.
+The companion generator now includes these copies. Matching all these inputs to
+the released library bytes and satisfying all source requirements remains open.
+
+Static inspection of both the baseline and Preview 3 FMOD version function
+returns `0x00020210`, identifying FMOD Core 2.02.10. The Preview 3 FMOD SHA-256 is
+`d2849e22cc826da3c2580dcddf1962177e80b2efab5cb1d211a6b6642278b889`.
+Its bytes differ from the macOS input; the documented build transforms platform
+and load-path metadata. No binary was executed to obtain this evidence.
+
+The remaining permission question is specific: what applicable agreement covers
+modifying and redistributing this version/input in UTP? The current public FMOD
+EULA is not assumed to govern the historical input. Repository source visibility,
+free downloads and support links do not answer that question by themselves.
