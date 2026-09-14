@@ -138,9 +138,12 @@ The current UTP build presents two choices on first launch:
 
 UTP keeps only the supported `Maps`, `Music`, `Sounds`, and `Textures` data in
 its app container. It does not import the desktop `System` directory or run
-native code from imported content. Enabling the automatic acquisition path in
-a publicly distributed binary still requires written permission and
-Apple-channel review. See
+native code from imported content. This describes implemented behavior, not
+a finding that distribution rights have been cleared. Public previews already
+exist; the earlier written-permission gate remains unresolved in the public
+record. Review the applicable terms and any separate permission for the shipped
+runtime and acquisition flow; Apple review requirements depend on the selected
+channel. See
 [`docs/DATA_COMPATIBILITY.md`](docs/DATA_COMPATIBILITY.md) and
 [`docs/DISTRIBUTION_AND_ONBOARDING.md`](docs/DISTRIBUTION_AND_ONBOARDING.md).
 
@@ -321,8 +324,10 @@ For practical purposes, the required game is currently available online at no
 cost through OldUnreal's
 [full-game installers](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/).
 They download the original GOTY disc image and apply the latest OldUnreal patch.
-UTP uses that established source path; it does not bundle or relicense the game,
-and Epic's terms still apply.
+UTP uses that established source path. The preview omits the GOTY disc image
+and the Maps, Music, Sounds, and Textures supplied during setup, but includes a
+transformed engine runtime. Free access to the game is separate from permission
+to redistribute that runtime. Epic's terms still apply.
 </details>
 
 <details>
@@ -331,7 +336,9 @@ and Epic's terms still apply.
 UTP stores the accepted `Maps`, `Music`, `Sounds`, and `Textures` inside its
 private app container. It rejects desktop executables and native packages,
 commits imports transactionally, and removes temporary acquisition media. The
-repository and distributable app remain game-data-free.
+source repository excludes the imported game data. The preview omits those
+content directories but includes a transformed engine runtime; see the
+[Preview 3 component review](docs/RELEASE-COMPONENT-REVIEW-2026-09-14.md).
 </details>
 
 <details>
