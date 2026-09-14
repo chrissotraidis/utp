@@ -154,6 +154,10 @@ ipa_sha="$(shasum -a 256 "$ipa" | awk '{print $1}')"
 bundle_id="$(plutil -extract CFBundleIdentifier raw "$packaged_app/Info.plist")"
 git_commit="$(git rev-parse HEAD)"
 manifest="$output_dir/manifest-${mode}.json"
+supplement="${ipa%.ipa}-review.zip"
+python3 tools/package_review_supplement.py \
+  --ipa "$ipa" --output "$supplement" --source-commit "$git_commit"
+supplement_sha="$(shasum -a 256 "$supplement" | awk '{print $1}')"
 
 jq -n \
   --arg mode "$mode" \
@@ -163,6 +167,8 @@ jq -n \
   --arg engine_sha256 "$engine_sha" \
   --arg ipa_sha256 "$ipa_sha" \
   --arg ipa "$ipa" \
+  --arg review_supplement "$supplement" \
+  --arg review_supplement_sha256 "$supplement_sha" \
   --argjson installable "$installable" \
   --argjson re_signable "$re_signable" \
   '{schema_version:1, mode:$mode, installable_on_stock_ios:$installable,
@@ -170,7 +176,8 @@ jq -n \
     bundle_identifier:$bundle_id, git_commit:$git_commit,
     contains_user_game_data:false, runtime_jit_required:false,
     app_binary_sha256:$app_binary_sha256, engine_sha256:$engine_sha256,
-    ipa_sha256:$ipa_sha256, ipa:$ipa}' >"$manifest"
+    ipa_sha256:$ipa_sha256, ipa:$ipa,
+    review_supplement:$review_supplement, review_supplement_sha256:$review_supplement_sha256}' >"$manifest"
 
 echo "package_local=passed mode=$mode installable_on_stock_ios=$installable"
 echo "package_local_ipa=$ipa"

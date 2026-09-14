@@ -96,3 +96,32 @@ The live Preview 3 release asset list contained only the IPA at this review time
 there was no separate notice/source supplement asset. The repository itself has
 source and input pins. Completeness of required source and notice delivery remains
 an open check, rather than an inference from asset count alone.
+
+## Repeatable package review companion
+
+`tools/package_local_ipa.sh` now generates an `*-review.zip` companion after the
+final IPA is assembled. Its manifest records the IPA hash and every file's hash,
+and it includes the verified font notices. The local package manifest records
+the companion filename and checksum. Changed or missing font bytes stop companion
+generation so old notices cannot silently describe different fonts.
+
+Publish both files together. The companion is explicitly partial: it does not
+contain Corresponding Source, runtime permission, or all dependency notices.
+The signed app is untouched; no payload, game files, or credentials are copied
+into the companion. Existing binaries require a separately generated companion.
+
+## Applicable-terms review
+
+The [v469e-tag notices](https://github.com/OldUnreal/UnrealTournamentPatches/blob/v469e/LICENSE.md)
+and [current notices](https://github.com/OldUnreal/UnrealTournamentPatches/blob/master/LICENSE.md)
+are different. Do not use the current linked Epic agreement as proof of the exact
+agreement governing the historical input. OldUnreal's documented Epic approval
+is project-specific; this record does not infer downstream permissions from it.
+
+[FMOD's current public EULA](https://www.fmod.com/legal) includes conditional
+redistribution paths. Exact FMOD version, applicable terms/custom permissions,
+modification/distribution scope, and runtime attribution remain to be verified.
+Check existing in-game credits before adding a duplicate credit. Current FMOD
+Studio-specific branding instructions should not be imposed on this runtime
+without confirming applicability. No income or license violation is inferred
+from the presence of a support link or from this review.

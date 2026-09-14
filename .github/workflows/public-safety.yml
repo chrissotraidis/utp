@@ -17,3 +17,5 @@ jobs:
           fetch-depth: 0
       - name: Check publishable source boundary
         run: make public-check
+      - name: Check package review supplement
+        run: python3 -m unittest discover -s Tests -p test_package_review_supplement.py

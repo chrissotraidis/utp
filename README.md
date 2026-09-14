@@ -339,6 +339,9 @@ commits imports transactionally, and removes temporary acquisition media. The
 source repository excludes the imported game data. The preview omits those
 content directories but includes a transformed engine runtime; see the
 [Preview 3 component review](docs/RELEASE-COMPONENT-REVIEW-2026-09-14.md).
+New packages also produce a matching `*-review.zip` with an archive inventory
+and verified font notices. It is partial review material, not a complete
+source/license supplement.
 </details>
 
 <details>
