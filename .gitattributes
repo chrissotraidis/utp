@@ -1,0 +1,16 @@
+
+# Preserve verbatim upstream notice bytes, including their original whitespace.
+third_party/notices/libraries/SDL2/LICENSE.txt whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/COPYING whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/LICENSE-pffft whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/LICENSE.Apache-2.0.txt whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/LICENSE.BSD-3-Clause.txt whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/fmt-11.2.0/LICENSE whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/OpenAL-Soft/gsl/LICENSE whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/mpg123/COPYING whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/mpg123/AUTHORS whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/libsndfile/COPYING whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/libsndfile/src/ALAC/LICENSE whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/libxmp/docs/COPYING whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/libraries/libxmp/src/loaders/prowizard/LICENSE.txt whitespace=-blank-at-eol,-blank-at-eof
+third_party/notices/OldUnreal-v469e/LICENSE.md whitespace=-blank-at-eol,-blank-at-eof
