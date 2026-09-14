@@ -38,8 +38,9 @@ obligations require separate examination.
 3. Match shipped libraries to source versions, local patches, notices, and any
    applicable source/relinking obligations. Determine what is required before
    claiming compliance or a breach.
-4. Establish FMOD and font provenance and terms, which the dependency list does
-   not currently document. File names alone do not establish version or license.
+4. Resolve FMOD provenance and redistribution terms. Font metadata has now been
+   inspected; see the follow-up below. Check source matching and any additional
+   upstream font notices before marking delivery complete.
 5. Repeat the inventory for any candidate promoted beyond Preview 3. Make an
    explicit release decision after resolving material rights/source gaps.
 
@@ -73,3 +74,25 @@ Payload/UT99Apple.app/Frameworks/UT99MetalShim.dylib
 Payload/UT99Apple.app/Info.plist
 Payload/UT99Apple.app/PkgInfo
 ```
+
+## Follow-up: font metadata and FMOD build path
+
+The three fonts' actual name tables identify Tinos 1.23 and Open Sans 1.10 as
+Apache-2.0, and Courier Prime 1.203 as SIL OFL 1.1. Courier Prime includes the
+full OFL and its copyright notice in the font metadata. Their hashes match the
+package verifier. Accessible copies of these notices and license texts are now
+in [third_party/notices](../third_party/notices/README.md). This narrows the
+previous font uncertainty; lack of standalone files did not mean no embedded
+license existed. The published IPA is unchanged.
+
+The `ios-fmod-real` Makefile target reads `libfmod.dylib` from the local OldUnreal
+macOS baseline, extracts arm64, changes the target platform and library load paths,
+and signs the result. There is also a separate source-built stub target; do not
+confuse the two. This identifies the real target's build provenance, not an exact
+binary match or permission to modify/redistribute that library. Verify applicable
+terms for the input shipped with v469e and match the Preview 3 library to that path.
+
+The live Preview 3 release asset list contained only the IPA at this review time;
+there was no separate notice/source supplement asset. The repository itself has
+source and input pins. Completeness of required source and notice delivery remains
+an open check, rather than an inference from asset count alone.
