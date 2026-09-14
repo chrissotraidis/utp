@@ -2,7 +2,7 @@
 
 ## Current decision
 
-UTP now builds, signs, installs, launches, and plays on physical iPhone and iPad. Preview 1 is distributed as an unsigned, re-signable developer artifact rather than a generally installable Apple-channel release. Publishing that artifact does not settle transformed-runtime permission, acquisition permission, or App Store/TestFlight requirements.
+UTP now builds, signs, installs, launches, and plays on physical iPhone and iPad. Preview 3 is distributed as an unsigned, re-signable developer artifact rather than a generally installable Apple-channel release. Publishing that artifact does not settle transformed-runtime permission, acquisition permission, or App Store/TestFlight requirements.
 
 Online play is a launch-critical feature, not a later enhancement. The current Simulator build has already populated the original v469 server browser, joined public servers, downloaded data-only server packages, played through death and respawn, survived a map transition, and disconnected through the original menu. Physical-device networking and another player's observation remain required before release promotion.
 
@@ -10,9 +10,9 @@ Online play is a launch-critical feature, not a later enhancement. The current S
 
 ### Beta
 
-Preview 1 uses an unsigned IPA for testers who understand re-signing and sideloading. TestFlight remains the preferred Apple-supported external beta path once its release gates close.
+Preview 3 uses an unsigned IPA for testers who understand re-signing and sideloading. TestFlight remains the preferred Apple-supported external beta path once its release gates close.
 
-The Preview 1 IPA contains no maintainer provisioning profile or registered-device list. Testers must re-sign it with their own Apple account using AltStore Classic with AltServer, SideStore, Sideloadly, or an Apple development workflow.
+The Preview 3 IPA contains no maintainer provisioning profile or registered-device list. Testers must re-sign it with their own Apple account using AltStore Classic with AltServer, SideStore, Sideloadly, or an Apple development workflow.
 
 Ad Hoc IPA distribution is useful only for a bounded registered-device test group. A raw IPA on a normal webpage is not a general worldwide installation mechanism: Ad Hoc builds are limited to registered devices, while Apple website distribution requires eligibility, App Store Connect review/notarization, approved domains, installation licensing, and supported regions.
 
@@ -39,11 +39,11 @@ The implemented candidate user flow is:
 6. Delete temporary disc/archive material after completion or cancellation.
 7. Enter the original menu with **Play Offline** and **Play Online** next actions.
 
-[OldUnreal's current full-game installer page](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/) states that its installers download the original UT99 GOTY disc image from OldUnreal's servers, with Archive.org as a fallback, and apply the latest patch. [OldUnreal's patch repository](https://github.com/OldUnreal/UnrealTournamentPatches) states that the project was approved by Epic Games but is not an Epic project. Those sources support an authorized-source onboarding design; they do not automatically grant this project permission to mirror the ISO, redistribute a transformed OldUnreal engine, or bypass the source's terms. Written confirmation from the relevant rights holders/maintainers is a public-release gate.
+[OldUnreal's current full-game installer page](https://www.oldunreal.com/downloads/unrealtournament/full-game-installers/) states that its installers download the original UT99 GOTY disc image from OldUnreal's servers, with Archive.org as a fallback, and apply the latest patch. [OldUnreal's patch repository](https://github.com/OldUnreal/UnrealTournamentPatches) states that the project was approved by Epic Games but is not an Epic project. Those sources support an authorized-source onboarding design; they do not automatically grant this project permission to mirror the ISO, redistribute a transformed OldUnreal engine, or bypass the source's terms. Earlier project documentation set written confirmation from the relevant rights holders/maintainers as a public-release gate. Public previews now exist, but this review has not established whether that gate was satisfied. Record the applicable terms or separate permission for the actual release; do not infer either approval or infringement from publication alone.
 
 This in-app path is implemented in `UT99GameDataAcquisition.swift` and reuses the existing transactional importer. A deterministic Joliet/ISO-9660 fixture and the locally ignored official image both pass extraction tests; the official image yields 283 accepted files, and v469e decompresses its `.unr.uz` maps at first engine launch. A companion web page can explain and deep-link into the installed app, but should not silently download hundreds of megabytes or imply that a browser can install arbitrary files directly into the app container.
 
-The implementation is ready for physical acceptance, but its presence in source is not a claim that a public binary may redistribute the transformed engine or automate this acquisition in every release channel. Obtain written permission and Apple review clearance before enabling it in a public build.
+The current README describes this flow as available in the app. That implementation status is separate from rights and channel review. The earlier permission gate remains unresolved in the public record, rather than evidence that the feature is only planned. Review the runtime and acquisition flow against applicable terms and any separate permission; App Store/TestFlight requirements are separate from the unsigned preview. See [the Preview 3 component review](RELEASE-COMPONENT-REVIEW-2026-09-14.md).
 
 ## Online-play launch gate
 

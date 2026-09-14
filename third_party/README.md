@@ -1,7 +1,10 @@
 # Third-party build inputs
 
-Pinned versions, provenance, licenses, and shipping intent are recorded in
-`deps.lock.json`. Source checkouts and downloaded archives live under ignored
+Pinned build versions, provenance, licenses, and scoped shipping observations
+are recorded in `deps.lock.json`. The shipping observation applies to Preview 3
+only; archive member presence does not verify the recorded binary versions.
+The [component review](../docs/RELEASE-COMPONENT-REVIEW-2026-09-14.md) also
+records engine, FMOD, font, and shim files not covered by the dependency list. Source checkouts and downloaded archives live under ignored
 `ref/`; generated target-specific source copies and binaries live under
 ignored `build/`.
 
