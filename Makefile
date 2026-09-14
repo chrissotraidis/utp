@@ -133,6 +133,7 @@ test:
 	@./Tests/test_device_readiness.sh
 	@./Tests/test_device_gate_script.sh
 	@./Tests/test_local_ipa_packaging.sh
+	@python3 -m unittest discover -s Tests -p test_package_review_supplement.py
 	@./Tests/test_runtime_guard.sh
 	@./Tests/test_complete_macho_audit.sh
 	@./Tests/test_openal_ios_patch.sh
