@@ -11,7 +11,6 @@
   <img alt="iOS and iPadOS 17 or later" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-17%2B-0A84FF?logo=apple">
   <img alt="FruCoRe Metal renderer" src="https://img.shields.io/badge/renderer-FruCoRe%20Metal-5E5CE6">
   <img alt="Tested on physical iPhone and iPad" src="https://img.shields.io/badge/physical%20iPhone%20%2F%20iPad-tested-30D158">
-  <a href="https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.3"><img alt="Preview 3 IPA" src="https://img.shields.io/badge/public%20IPA-Preview%203-FF9F0A"></a>
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
 </p>
 
@@ -37,18 +36,9 @@ multiplayer protocol. UTP supplies the Apple-platform layer around it—Metal
 presentation, touch input, lifecycle, game-file setup, recovery, and
 diagnostics.
 
-This source tree does **not** contain Epic game data, OldUnreal release
-binaries, generated engine images, signing material, or IPA payloads. Preview
-IPAs are published separately on the
-[GitHub Releases page](https://github.com/chrissotraidis/utp/releases).
-Those boundaries are enforced by [`make public-check`](#repository-safety).
+Previous builds have been retired; a new version is in progress.
 
-> [!IMPORTANT]
-> UTP builds, signs, installs, launches, and plays on physical iPhone and iPad.
-> Touch gameplay, audio, and controller play have been exercised on real
-> hardware. [Preview 3](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.3)
-> is available as an unsigned IPA that must be re-signed before installation.
-> It is a developer preview, not an App Store or TestFlight release.
+> Previous builds have been retired; a new version is in progress.
 
 ## Release status
 
@@ -57,7 +47,6 @@ Those boundaries are enforced by [`make public-check`](#repository-safety).
 | Source repository | **Public** | Source and Preview 3 release notes are available from this repository. |
 | Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
 | iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
-| Public IPA | **Preview 3 available** | Download the unsigned IPA from [v0.1.0-preview.3](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.3) and re-sign it with your own Apple account. |
 | TestFlight / App Store | **Not available** | Preview 3 is a sideloadable developer artifact, not a universal one-tap installation. |
 | App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and release operations remain open. |
 
@@ -310,11 +299,7 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <details>
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
-Yes. Download the unsigned IPA from
-[UTP v0.1.0 Preview 3](https://github.com/chrissotraidis/utp/releases/tag/v0.1.0-preview.3),
-then re-sign it with your own Apple account using AltStore Classic with
-AltServer, SideStore, Sideloadly, or an Apple development-signing workflow.
-TestFlight and App Store installation are not available.
+Previous builds have been retired; a new version is in progress.
 </details>
 
 <details>
