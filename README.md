@@ -52,10 +52,10 @@ Previous builds have been retired; a new version is in progress.
 
 | Surface | Current status | Meaning |
 |---|---|---|
-| Source repository | **Public** | Source and Preview 3 release notes are available from this repository. |
+| Source repository | **Public** | Source is available from this repository. Preview 3 has been retired while a new version is prepared. |
 | Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
 | iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
-| TestFlight / App Store | **Not available** | Preview 3 is a sideloadable developer artifact, not a universal one-tap installation. |
+| TestFlight / App Store | **Not available** | No TestFlight build. The sideloadable developer previews have been retired. |
 | App Store / website install | **Not announced** | Distribution permission, Apple review/channel requirements, privacy work, and release operations remain open. |
 
 The authoritative gate ledger is [`docs/STATUS.md`](docs/STATUS.md). The
@@ -307,7 +307,9 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <details>
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
-Previous builds have been retired; a new version is in progress.
+Not yet. Previous builds have been retired; a new version is in progress.
+[PadMint](https://github.com/chrissotraidis/padmint) lists UTP under **Not available yet** and links back here until a new
+download is ready.
 </details>
 
 <details>
