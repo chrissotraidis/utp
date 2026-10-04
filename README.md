@@ -12,6 +12,7 @@
   <img alt="FruCoRe Metal renderer" src="https://img.shields.io/badge/renderer-FruCoRe%20Metal-5E5CE6">
   <img alt="Tested on physical iPhone and iPad" src="https://img.shields.io/badge/physical%20iPhone%20%2F%20iPad-tested-30D158">
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
+  <a href="https://discord.gg/xwHfUD2bxW"><img alt="Join the UTP Discord" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&amp;logoColor=white"></a>
 </p>
 
 ![Unreal Tournament 99 gameplay in UTP with the Flak Cannon visible](docs/readme/utp-gameplay-flak-cannon.png)
@@ -39,6 +40,13 @@ diagnostics.
 Previous builds have been retired; a new version is in progress.
 
 > Previous builds have been retired; a new version is in progress.
+
+> [!NOTE]
+> **AI disclosure:** UTP uses substantial AI assistance for code, tests,
+> documentation, debugging and maintenance. Some support replies and maintenance
+> tasks are automated. There is no audited percentage of AI-generated code.
+> Build, test and device records describe what was checked. This disclosure
+> concerns UTP's workflow, not the authorship of its upstream projects.
 
 ## Release status
 
@@ -425,6 +433,16 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing a change. Use
 [`SECURITY.md`](SECURITY.md) for sensitive reports. Pull requests should be
 focused, run `make public-check`, state the validation performed, and preserve
 the distinction between Simulator evidence and physical-device acceptance.
+
+## Community and support
+
+[Join the Discord](https://discord.gg/xwHfUD2bxW) for help and news. It is one
+community for UTP and its sibling projects, such as KartPad, BlueWake and
+MeleePad: ask about setup and installing, share how it runs on your device, and
+hear about new releases first.
+
+Found a bug? [Open an issue](https://github.com/chrissotraidis/utp/issues) with
+your device, its OS version, and the steps that led to it.
 
 ## Legal and acknowledgements
 
