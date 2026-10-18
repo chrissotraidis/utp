@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "id": "utp",
+  "name": "UTP",
+  "game": "Unreal Tournament GOTY (PC)",
+  "kind": "upstream-engine",
+  "status": "experimental",
+  "inputs": [
+    {
+      "type": "game-folder",
+      "when": "in-app",
+      "description": "Your own Unreal Tournament GOTY files (a folder or ZIP with Maps, Music, Sounds and Textures). You import them in UTP after installing; the build does not read them."
+    }
+  ],
+  "targets": {
+    "ios": {
+      "hosts": {
+        "macos-arm64": "experimental"
+      },
+      "tools": [
+        "git",
+        "cmake",
+        "ninja"
+      ],
+      "output": "ipa",
+      "check": "ipa",
+      "steps": [
+        {
+          "stage": "build",
+          "command": [
+            "/bin/bash",
+            "{repo}/tools/build_padmint_ios.sh",
+            "{output}"
+          ]
+        }
+      ]
+    }
+  },
+  "requirements": {
+    "disk_gb": 10,
+    "tools": [
+      {
+        "name": "git",
+        "version_args": [
+          "--version"
+        ]
+      },
+      {
+        "name": "cmake",
+        "version_args": [
+          "--version"
+        ]
+      },
+      {
+        "name": "ninja",
+        "version_args": [
+          "--version"
+        ]
+      },
+      {
+        "name": "jq",
+        "version_args": [
+          "--version"
+        ],
+        "player": true,
+        "note": "Install it with Homebrew: brew install jq"
+      },
+      {
+        "name": "xcodebuild",
+        "version_args": [
+          "-version"
+        ],
+        "min_version": "26",
+        "player": true,
+        "note": "Install Xcode 26 or newer with its iOS platform, then select it in Xcode Settings > Locations > Command Line Tools; Command Line Tools alone are not enough."
+      },
+      {
+        "name": "xcrun",
+        "label": "Xcode iPhoneOS SDK",
+        "version_args": [
+          "--sdk",
+          "iphoneos",
+          "--show-sdk-path"
+        ],
+        "player": true,
+        "note": "Install Xcode 26 or newer with its iOS platform, then select it in Xcode Settings > Locations > Command Line Tools; Command Line Tools alone are not enough."
+      }
+    ]
+  },
+  "publication": {
+    "public_binaries": false,
+    "reason": "Each copy is built on the player's own Mac from OldUnreal's free 469e release, so it stays personal. Unreal Tournament data is imported in the app."
+  }
+}
