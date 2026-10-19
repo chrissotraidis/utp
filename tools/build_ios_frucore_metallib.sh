@@ -18,9 +18,18 @@ work="$(mktemp -d)"
 export work
 trap 'rm -rf "$work"' EXIT
 
-objdump="$(xcrun --find metal-objdump)"
-air_as="$(xcrun --find air-as)"
-metallib="$(xcrun --find metallib)"
+# Newer Xcode keeps some Metal Toolchain tools beside air-as without exposing
+# them to xcrun --find, so look there when xcrun cannot.
+metal_tool() {
+  xcrun --find "$1" 2>/dev/null && return
+  local beside
+  beside="$(dirname "$(xcrun --find air-as)")/$1"
+  [[ -x "$beside" ]] || { echo "Metal Toolchain tool missing: $1 (run: xcodebuild -downloadComponent MetalToolchain)" >&2; return 1; }
+  echo "$beside"
+}
+objdump="$(metal_tool metal-objdump)"
+air_as="$(metal_tool air-as)"
+metallib="$(metal_tool metallib)"
 
 # The shipped library retains AIR LLVM IR in its module list. Extract that
 # IR, retarget it, and relink it with the current Apple Metal toolchain. The
