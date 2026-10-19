@@ -307,9 +307,10 @@ follow [`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
 <details>
 <summary><strong>Can I download and play UTP now?</strong></summary>
 
-Not yet. Previous builds have been retired; a new version is in progress.
-[PadMint](https://github.com/chrissotraidis/padmint) lists UTP under **Not available yet** and links back here until a new
-download is ready.
+Yes, by building your own copy. Open [PadMint](https://github.com/chrissotraidis/padmint/releases/latest)
+0.5.5 or newer on an Apple Silicon Mac with Xcode, choose **Unreal Tournament** and follow the page. PadMint
+builds UTP from this repository's latest release and saves an app file for your iPhone or iPad. Install it with
+your own Apple ID, then import your Unreal Tournament GOTY files in the app.
 </details>
 
 <details>
