@@ -37,9 +37,9 @@ multiplayer protocol. UTP supplies the Apple-platform layer around it—Metal
 presentation, touch input, lifecycle, game-file setup, recovery, and
 diagnostics.
 
-Previous builds have been retired; a new version is in progress.
-
-> Previous builds have been retired; a new version is in progress.
+UTP 0.1.0 is out: build your own copy with PadMint on an Apple Silicon Mac, or on
+[GitHub's free Mac](https://github.com/chrissotraidis/padmint#no-mac-build-on-githubs-mac) without one. See
+[Can I download and play UTP now?](#frequently-asked-questions)
 
 > [!NOTE]
 > **AI disclosure:** UTP uses substantial AI assistance for code, tests,
@@ -52,7 +52,7 @@ Previous builds have been retired; a new version is in progress.
 
 | Surface | Current status | Meaning |
 |---|---|---|
-| Source repository | **Public** | Source is available from this repository. Preview 3 has been retired while a new version is prepared. |
+| Source repository | **Public** | Source is available from this repository. Release 0.1.0 publishes the recipe PadMint builds from; there is no prebuilt app. |
 | Physical iPhone/iPad | **Working and extensively tested** | UTP builds, signs, installs, launches, and runs the full game on real iPhone and iPad hardware with touch gameplay and audio. Controller play has also been exercised. |
 | iPhone/iPad Simulator | **Developer test path working** | The original engine reaches live bot and network sessions through FruCoRe/Metal with the native host and touch layer. |
 | TestFlight / App Store | **Not available** | No TestFlight build. The sideloadable developer previews have been retired. |
@@ -311,6 +311,9 @@ Yes, by building your own copy. Open [PadMint](https://github.com/chrissotraidis
 0.5.5 or newer on an Apple Silicon Mac with Xcode, choose **Unreal Tournament** and follow the page. PadMint
 builds UTP from this repository's latest release and saves an app file for your iPhone or iPad. Install it with
 your own Apple ID, then import your Unreal Tournament GOTY files in the app.
+
+No Mac? You can build it on GitHub's free Mac from Windows, Linux or any computer with a web browser:
+follow [PadMint's steps](https://github.com/chrissotraidis/padmint#no-mac-build-on-githubs-mac).
 </details>
 
 <details>
