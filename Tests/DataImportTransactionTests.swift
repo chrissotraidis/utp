@@ -35,6 +35,22 @@ struct DataImportTransactionTests {
             // The incomplete transaction and journal deliberately remain.
         }
 
+        // A failed rollback must itself be safely retryable. The old implementation
+        // consumed each backup as it restored it, then deleted that restored data
+        // when a later launch retried the still-committing journal.
+        do {
+            _ = try UT99DataImportTransaction.recoverInterruptedCommit(
+                at: root,
+                failAfterRestoredItemCount: 1
+            )
+            throw TestFailure("forced recovery interruption unexpectedly completed")
+        } catch is TestFailure {
+            throw TestFailure("forced recovery interruption unexpectedly completed")
+        } catch {
+            // Simulates termination or an I/O error after restoring Maps.
+        }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+
         guard try UT99DataImportTransaction.recoverInterruptedCommit(at: root) else {
             throw TestFailure("interrupted transaction was not discovered")
         }
@@ -42,6 +58,31 @@ struct DataImportTransactionTests {
         try expect(system.appendingPathComponent("keep.txt"), equals: "system-must-survive")
         guard !fileManager.fileExists(atPath: root.appendingPathComponent("Maps/interrupted.unr").path) else {
             throw TestFailure("partial replacement survived rollback")
+        }
+
+        // Simulate a crash during cleanup after the completed-rollback checkpoint.
+        // An incomplete backup must be cleaned up without touching restored data.
+        let cleanupBackup = root.appendingPathComponent(".import-backup-cleanup", isDirectory: true)
+        let cleanupStaging = root.appendingPathComponent(".import-staging-cleanup", isDirectory: true)
+        try fileManager.createDirectory(at: cleanupBackup, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: cleanupStaging, withIntermediateDirectories: true)
+        let cleanupJournal: [String: Any] = [
+            "format": 2,
+            "backupDirectoryName": cleanupBackup.lastPathComponent,
+            "stagingDirectoryName": cleanupStaging.lastPathComponent,
+            "managedItemNames": UT99DataImportTransaction.contentDirectoryNames + [UT99DataImportTransaction.manifestName],
+            "phase": "restored"
+        ]
+        try JSONSerialization.data(withJSONObject: cleanupJournal).write(
+            to: root.appendingPathComponent(".ut99-import-transaction.json")
+        )
+        guard try UT99DataImportTransaction.recoverInterruptedCommit(at: root) else {
+            throw TestFailure("interrupted rollback cleanup was not discovered")
+        }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+        guard !fileManager.fileExists(atPath: cleanupBackup.path),
+              !fileManager.fileExists(atPath: cleanupStaging.path) else {
+            throw TestFailure("interrupted rollback cleanup left transaction data")
         }
 
         let successful = try staging(in: root, name: ".import-staging-success", marker: "new")
@@ -143,7 +184,7 @@ struct DataImportTransactionTests {
             throw TestFailure("transaction debris remained: \(leftovers)")
         }
 
-        print("UT99 data transaction PASS rollback=true replacement=true cancellation=true atomicBoundary=true hashCancellation=true runtimeSupport=true systemPreserved=true")
+        print("UT99 data transaction PASS rollback=true rollbackRetry=true rollbackCleanup=true replacement=true cancellation=true atomicBoundary=true hashCancellation=true runtimeSupport=true systemPreserved=true")
     }
 
     private static func staging(in root: URL, name: String, marker: String) throws -> (root: URL, manifest: Data) {

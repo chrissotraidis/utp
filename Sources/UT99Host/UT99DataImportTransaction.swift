@@ -30,6 +30,7 @@ enum UT99DataImportTransaction {
     private enum Phase: String, Codable {
         case committing
         case installed
+        case restored
     }
 
     private struct Journal: Codable {
@@ -121,17 +122,21 @@ enum UT99DataImportTransaction {
     }
 
     @discardableResult
-    static func recoverInterruptedCommit(at supportRoot: URL) throws -> Bool {
+    static func recoverInterruptedCommit(
+        at supportRoot: URL,
+        failAfterRestoredItemCount: Int? = nil
+    ) throws -> Bool {
         let fileManager = FileManager.default
         let journalURL = supportRoot.appendingPathComponent(journalName)
         guard fileManager.fileExists(atPath: journalURL.path) else { return false }
 
-        let journal = try JSONDecoder().decode(Journal.self, from: Data(contentsOf: journalURL))
+        var journal = try JSONDecoder().decode(Journal.self, from: Data(contentsOf: journalURL))
         let backupRoot = supportRoot.appendingPathComponent(journal.backupDirectoryName, isDirectory: true)
         let stagedRoot = supportRoot.appendingPathComponent(journal.stagingDirectoryName, isDirectory: true)
         let managedItemNames = journal.managedItemNames ?? (contentDirectoryNames + [manifestName])
 
         if journal.phase == .committing {
+            var restoredItems = 0
             for name in managedItemNames {
                 let current = supportRoot.appendingPathComponent(name)
                 if fileManager.fileExists(atPath: current.path) {
@@ -139,9 +144,19 @@ enum UT99DataImportTransaction {
                 }
                 let backup = backupRoot.appendingPathComponent(name)
                 if fileManager.fileExists(atPath: backup.path) {
-                    try fileManager.moveItem(at: backup, to: current)
+                    // Keep the rollback source intact until every item has been
+                    // restored. A failed recovery can then safely retry.
+                    try fileManager.copyItem(at: backup, to: current)
+                }
+                restoredItems += 1
+                if failAfterRestoredItemCount == restoredItems {
+                    throw CocoaError(.fileWriteUnknown)
                 }
             }
+            // Checkpoint before removing any backups: an interrupted cleanup
+            // must never replay rollback from an incomplete backup directory.
+            journal.phase = .restored
+            try writeJournal(journal, to: journalURL)
         }
 
         if fileManager.fileExists(atPath: backupRoot.path) {
