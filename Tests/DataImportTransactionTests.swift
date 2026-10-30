@@ -10,6 +10,8 @@ struct DataImportTransactionTests {
         defer { try? fileManager.removeItem(at: root) }
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
 
+        try legacyRecoveryTests(in: root)
+
         let system = root.appendingPathComponent("System", isDirectory: true)
         let oldMaps = root.appendingPathComponent("Maps", isDirectory: true)
         try fileManager.createDirectory(at: system, withIntermediateDirectories: true)
@@ -185,6 +187,159 @@ struct DataImportTransactionTests {
         }
 
         print("UT99 data transaction PASS rollback=true rollbackRetry=true rollbackCleanup=true replacement=true cancellation=true atomicBoundary=true hashCancellation=true runtimeSupport=true systemPreserved=true")
+    }
+
+    private static func legacyRecoveryTests(in parent: URL) throws {
+        let fm = FileManager.default
+        let root = parent.appendingPathComponent("legacy-recovery")
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let journalURL = root.appendingPathComponent(".ut99-import-transaction.json")
+        let backup = root.appendingPathComponent(".import-backup-legacy")
+        let oldStaging = try staging(in: root, name: ".import-staging-legacy", marker: "interrupted")
+        for name in ["Maps", "Music"] {
+            try fm.createDirectory(at: backup.appendingPathComponent(name), withIntermediateDirectories: true)
+        }
+        try Data("old-map".utf8).write(to: backup.appendingPathComponent("Maps/old.unr"))
+        try Data("old-music".utf8).write(to: backup.appendingPathComponent("Music/old.umx"))
+        try fm.createDirectory(at: root.appendingPathComponent("Maps"), withIntermediateDirectories: true)
+        try Data("partial-new-map".utf8).write(to: root.appendingPathComponent("Maps/interrupted.unr"))
+        let legacy: [String: Any] = [
+            "format": 2, "phase": "committing",
+            "backupDirectoryName": backup.lastPathComponent,
+            "stagingDirectoryName": oldStaging.root.lastPathComponent,
+            "managedItemNames": UT99DataImportTransaction.contentDirectoryNames + [UT99DataImportTransaction.manifestName]
+        ]
+        let legacyData = try JSONSerialization.data(withJSONObject: legacy, options: .sortedKeys)
+        try legacyData.write(to: journalURL)
+        // Exactly the first v0.1.0 rollback iteration: remove the new Maps and
+        // consume its backup. Simulate interruption before the Music iteration.
+        try fm.removeItem(at: root.appendingPathComponent("Maps"))
+        try fm.moveItem(at: backup.appendingPathComponent("Maps"), to: root.appendingPathComponent("Maps"))
+        do {
+            _ = try UT99DataImportTransaction.recoverInterruptedCommit(at: root)
+            throw TestFailure("legacy rollback unexpectedly completed; restored Maps survives=\(fm.fileExists(atPath: root.appendingPathComponent("Maps/old.unr").path))")
+        } catch is TestFailure {
+            throw TestFailure("legacy consumed-backup recovery did not preserve-and-stop")
+        } catch {
+            guard error.localizedDescription.contains("repair") else { throw error }
+        }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+        try expect(backup.appendingPathComponent("Music/old.umx"), equals: "old-music")
+        guard try Data(contentsOf: journalURL) == legacyData else { throw TestFailure("legacy journal changed") }
+
+        // A replacement that fails even before new backups are ready must leave
+        // the old active journal and its recovery sources untouched.
+        do {
+            try UT99DataImportTransaction.commit(stagedRoot: root.appendingPathComponent(".import-staging-missing"),
+                                                manifestData: Data("{}".utf8), to: root)
+            throw TestFailure("missing staged replacement unexpectedly committed")
+        } catch is TestFailure { throw TestFailure("missing staged replacement unexpectedly committed") }
+        catch { }
+        guard try Data(contentsOf: journalURL) == legacyData else { throw TestFailure("preparation failure removed legacy marker") }
+        let backupNames = try fm.contentsOfDirectory(atPath: root.path).filter { $0.hasPrefix(".import-backup-") }
+        guard backupNames == [backup.lastPathComponent] else { throw TestFailure("failed preparation leaked a backup") }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+
+        let failed = try staging(in: root, name: ".import-staging-repair-failed", marker: "failed")
+        do {
+            try UT99DataImportTransaction.commit(stagedRoot: failed.root, manifestData: failed.manifest, to: root,
+                                                failAfterInstalledItemCount: 1)
+            throw TestFailure("failed repair unexpectedly committed")
+        } catch is TestFailure { throw TestFailure("failed repair unexpectedly committed") }
+        catch { }
+        guard try Data(contentsOf: journalURL) == legacyData else { throw TestFailure("failed repair did not restore prior journal") }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+        try expect(backup.appendingPathComponent("Music/old.umx"), equals: "old-music")
+
+        // Reproduce a crash during new rollback cleanup: restored live files and
+        // checkpoint remain, but that new backup has already been removed.
+        let cleanup = try staging(in: root, name: ".import-staging-repair-cleanup", marker: "cleanup")
+        do {
+            try UT99DataImportTransaction.commit(stagedRoot: cleanup.root, manifestData: cleanup.manifest, to: root,
+                                                failAfterInstalledItemCount: 1, recoverAfterFailure: false)
+        } catch { }
+        var cleanupJournal = try JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as! [String: Any]
+        let cleanupBackup = root.appendingPathComponent(cleanupJournal["backupDirectoryName"] as! String)
+        try fm.removeItem(at: root.appendingPathComponent("Maps"))
+        try fm.copyItem(at: cleanupBackup.appendingPathComponent("Maps"), to: root.appendingPathComponent("Maps"))
+        cleanupJournal["phase"] = "restored"
+        try JSONSerialization.data(withJSONObject: cleanupJournal).write(to: journalURL, options: .atomic)
+        try fm.removeItem(at: cleanupBackup)
+        do {
+            _ = try UT99DataImportTransaction.recoverInterruptedCommit(at: root)
+            throw TestFailure("unfinished older repair was cleared by cleanup")
+        } catch is TestFailure { throw TestFailure("unfinished older repair was cleared by cleanup") }
+        catch { }
+        guard try Data(contentsOf: journalURL) == legacyData else { throw TestFailure("cleanup did not restore prior journal") }
+        try expect(root.appendingPathComponent("Maps/old.unr"), equals: "old-map")
+
+        let repaired = try staging(in: root, name: ".import-staging-repaired", marker: "repaired")
+        try UT99DataImportTransaction.commit(stagedRoot: repaired.root, manifestData: repaired.manifest, to: root)
+        try expect(root.appendingPathComponent("Maps/repaired.unr"), equals: "repaired-Maps")
+        guard !fm.fileExists(atPath: journalURL.path),
+              try UT99DataImportTransaction.inspectInstalledManifest(at: root).isValid else {
+            throw TestFailure("valid explicit repair did not become ready")
+        }
+        try expect(backup.appendingPathComponent("Music/old.umx"), equals: "old-music")
+        guard fm.fileExists(atPath: oldStaging.root.path),
+              try fm.contentsOfDirectory(atPath: root.path).contains(where: { $0.hasPrefix(".ut99-import-preserved-") }) else {
+            throw TestFailure("successful repair erased legacy recovery sources")
+        }
+
+        let incomplete = try staging(in: root, name: ".import-staging-incomplete-backup", marker: "incomplete")
+        do {
+            try UT99DataImportTransaction.commit(stagedRoot: incomplete.root, manifestData: incomplete.manifest, to: root,
+                                                failAfterInstalledItemCount: 2, recoverAfterFailure: false)
+        } catch { }
+        let journalData = try Data(contentsOf: journalURL)
+        let journal = try JSONSerialization.jsonObject(with: journalData) as! [String: Any]
+        guard journal["format"] as? Int == 3,
+              (journal["originalItemNames"] as? [String])?.contains("Music") == true else {
+            throw TestFailure("new journal did not record original items")
+        }
+        let missingBackup = root.appendingPathComponent(journal["backupDirectoryName"] as! String)
+        try fm.removeItem(at: missingBackup.appendingPathComponent("Music"))
+        do {
+            _ = try UT99DataImportTransaction.recoverInterruptedCommit(at: root)
+            throw TestFailure("incomplete recorded backup was accepted")
+        } catch is TestFailure { throw TestFailure("incomplete recorded backup was accepted") }
+        catch { }
+        try expect(root.appendingPathComponent("Maps/incomplete.unr"), equals: "incomplete-Maps")
+        try expect(root.appendingPathComponent("Music/incomplete.dat"), equals: "incomplete-Music")
+        guard try Data(contentsOf: journalURL) == journalData else { throw TestFailure("incomplete-backup journal changed") }
+        for format in [1, 2] {
+            let compatible = root.appendingPathComponent("complete-legacy-\(format)")
+            try fm.createDirectory(at: compatible, withIntermediateDirectories: true)
+            let completeBackup = try staging(in: compatible, name: ".import-backup-complete", marker: "original")
+            try completeBackup.manifest.write(to: completeBackup.root.appendingPathComponent(UT99DataImportTransaction.manifestName))
+            let completeStaging = try staging(in: compatible, name: ".import-staging-complete", marker: "replacement")
+            let compatibleJournal: [String: Any] = [
+                "format": format, "phase": "committing",
+                "backupDirectoryName": completeBackup.root.lastPathComponent,
+                "stagingDirectoryName": completeStaging.root.lastPathComponent
+            ]
+            try JSONSerialization.data(withJSONObject: compatibleJournal)
+                .write(to: compatible.appendingPathComponent(".ut99-import-transaction.json"))
+            guard try UT99DataImportTransaction.recoverInterruptedCommit(at: compatible),
+                  try UT99DataImportTransaction.inspectInstalledManifest(at: compatible).isValid else {
+                throw TestFailure("complete legacy backup did not recover")
+            }
+            try expect(compatible.appendingPathComponent("Maps/original.unr"), equals: "original-Maps")
+        }
+        let empty = root.appendingPathComponent("originally-empty")
+        try fm.createDirectory(at: empty, withIntermediateDirectories: true)
+        let firstImport = try staging(in: empty, name: ".import-staging-first", marker: "first")
+        do {
+            try UT99DataImportTransaction.commit(stagedRoot: firstImport.root, manifestData: firstImport.manifest, to: empty,
+                                                failAfterInstalledItemCount: 1, recoverAfterFailure: false)
+        } catch { }
+        guard try UT99DataImportTransaction.recoverInterruptedCommit(at: empty),
+              !fm.fileExists(atPath: empty.appendingPathComponent("Maps").path),
+              !fm.fileExists(atPath: empty.appendingPathComponent(".ut99-import-transaction.json").path) else {
+            throw TestFailure("format-3 rollback did not remove an originally absent item")
+        }
+        print("UT99 legacy recovery PASS consumedBackup=true preparationFailure=true repairRollback=true cleanupRetry=true explicitRepair=true missingBackup=true completeLegacy=true originallyAbsent=true")
     }
 
     private static func staging(in root: URL, name: String, marker: String) throws -> (root: URL, manifest: Data) {

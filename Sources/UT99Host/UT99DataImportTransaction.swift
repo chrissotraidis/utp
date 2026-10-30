@@ -5,6 +5,12 @@ struct UT99ImportCancelled: LocalizedError {
     var errorDescription: String? { "Import cancelled; installed data was unchanged" }
 }
 
+struct UT99ImportRecoveryRequired: LocalizedError {
+    var errorDescription: String? {
+        "An interrupted import needs repair. Existing files and recovery backups were retained. Use Get Game Data or Import Files to install a verified replacement."
+    }
+}
+
 /// Installs user-owned UT99 content without exposing the live data set to a
 /// partial merge. A complete backup and an atomic journal are written before
 /// any live content is replaced. An interrupted commit is either rolled back
@@ -38,6 +44,8 @@ enum UT99DataImportTransaction {
         let backupDirectoryName: String
         let stagingDirectoryName: String
         let managedItemNames: [String]?
+        let originalItemNames: [String]?
+        let priorJournalName: String?
         var phase: Phase
     }
 
@@ -55,13 +63,34 @@ enum UT99DataImportTransaction {
             throw CocoaError(.fileWriteInvalidFileName)
         }
         try fileManager.createDirectory(at: supportRoot, withIntermediateDirectories: true)
-        _ = try recoverInterruptedCommit(at: supportRoot)
+        let journalURL = supportRoot.appendingPathComponent(journalName)
+        var priorJournalName: String?
+        do {
+            _ = try recoverInterruptedCommit(at: supportRoot)
+        } catch is UT99ImportRecoveryRequired {
+            // Only an explicitly prepared replacement may supersede unresolved
+            // recovery. Keep the active journal until the new one replaces it.
+            let archiveName = ".ut99-import-preserved-\(UUID().uuidString).json"
+            try fileManager.copyItem(at: journalURL, to: supportRoot.appendingPathComponent(archiveName))
+            priorJournalName = archiveName
+        }
 
         let transactionID = UUID().uuidString
         let backupName = ".import-backup-\(transactionID)"
         let backupRoot = supportRoot.appendingPathComponent(backupName, isDirectory: true)
-        let journalURL = supportRoot.appendingPathComponent(journalName)
         try fileManager.createDirectory(at: backupRoot, withIntermediateDirectories: true)
+        var journalPublished = false
+        defer {
+            if !journalPublished {
+                let activeBackup = (try? Data(contentsOf: journalURL))
+                    .flatMap { try? JSONDecoder().decode(Journal.self, from: $0) }?.backupDirectoryName
+                // If atomic publication failed ambiguously, retain the backup
+                // unless the active journal is absent or belongs to another set.
+                if !fileManager.fileExists(atPath: journalURL.path) || (activeBackup != nil && activeBackup != backupName) {
+                    try? fileManager.removeItem(at: backupRoot)
+                }
+            }
+        }
 
         let manifestURL = stagedRoot.appendingPathComponent(manifestName)
         try manifestData.write(to: manifestURL, options: .atomic)
@@ -74,20 +103,25 @@ enum UT99DataImportTransaction {
 
         // Copy the complete last-known-good set before publishing a journal.
         // Therefore a committing journal always points at a usable rollback.
+        var originalItemNames: [String] = []
         for name in managedItemNames {
             let current = supportRoot.appendingPathComponent(name)
             guard fileManager.fileExists(atPath: current.path) else { continue }
             try fileManager.copyItem(at: current, to: backupRoot.appendingPathComponent(name))
+            originalItemNames.append(name)
         }
 
         var journal = Journal(
-            format: 2,
+            format: 3,
             backupDirectoryName: backupName,
             stagingDirectoryName: stagedRoot.lastPathComponent,
             managedItemNames: managedItemNames,
+            originalItemNames: originalItemNames,
+            priorJournalName: priorJournalName,
             phase: .committing
         )
         try writeJournal(journal, to: journalURL)
+        journalPublished = true
 
         do {
             for name in managedItemNames {
@@ -134,8 +168,34 @@ enum UT99DataImportTransaction {
         let backupRoot = supportRoot.appendingPathComponent(journal.backupDirectoryName, isDirectory: true)
         let stagedRoot = supportRoot.appendingPathComponent(journal.stagingDirectoryName, isDirectory: true)
         let managedItemNames = journal.managedItemNames ?? (contentDirectoryNames + [manifestName])
+        var priorJournalData: Data?
+        if journal.phase != .installed, let priorName = journal.priorJournalName {
+            guard priorName.hasPrefix(".ut99-import-preserved-"), priorName.hasSuffix(".json"),
+                  !priorName.contains("/"), !priorName.contains("\\"),
+                  let data = try? Data(contentsOf: supportRoot.appendingPathComponent(priorName)),
+                  (try? JSONDecoder().decode(Journal.self, from: data)) != nil else {
+                throw UT99ImportRecoveryRequired()
+            }
+            priorJournalData = data
+        }
 
         if journal.phase == .committing {
+            if journal.format >= 3 {
+                guard journal.format == 3, let originalNames = journal.originalItemNames,
+                      Set(originalNames).count == originalNames.count,
+                      Set(originalNames).isSubset(of: Set(managedItemNames)),
+                      Set(originalNames) == Set(managedItemNames.filter {
+                          fileManager.fileExists(atPath: backupRoot.appendingPathComponent($0).path)
+                      }) else {
+                    throw UT99ImportRecoveryRequired()
+                }
+            } else if managedItemNames.contains(where: {
+                !fileManager.fileExists(atPath: backupRoot.appendingPathComponent($0).path)
+            }) {
+                // Older recovery consumed backups as it restored them. A missing
+                // backup might mean this live item is the last original copy.
+                throw UT99ImportRecoveryRequired()
+            }
             var restoredItems = 0
             for name in managedItemNames {
                 let current = supportRoot.appendingPathComponent(name)
@@ -165,8 +225,18 @@ enum UT99DataImportTransaction {
         if fileManager.fileExists(atPath: stagedRoot.path) {
             try fileManager.removeItem(at: stagedRoot)
         }
+        if journal.phase == .restored, let priorJournalData {
+            // A failed replacement must not make unresolved older data look ready.
+            // Keep the restored checkpoint active until the prior journal returns.
+            try priorJournalData.write(to: journalURL, options: .atomic)
+            throw UT99ImportRecoveryRequired()
+        }
         try fileManager.removeItem(at: journalURL)
         return true
+    }
+
+    static func hasInterruptedCommit(at supportRoot: URL) -> Bool {
+        FileManager.default.fileExists(atPath: supportRoot.appendingPathComponent(journalName).path)
     }
 
     static func inspectInstalledManifest(at supportRoot: URL) throws -> Inspection {

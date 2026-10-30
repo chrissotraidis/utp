@@ -2237,6 +2237,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     private func isGameDataReady() -> Bool {
+        guard !UT99DataImportTransaction.hasInterruptedCommit(at: dataSupportRoot()) else { return false }
         if CommandLine.arguments.contains("-UT99OnboardingSmokeTest") {
             return false
         }
@@ -2303,9 +2304,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             onboardingPrimaryButton?.accessibilityHint = "Starts the original Unreal Tournament menu and offline game"
             onboardingSecondaryButton?.accessibilityHint = "Opens direct connect and the original community server browser"
         } else {
-            statusLabel.text = "Game data required · download or import to continue"
-            onboardingTitleLabel?.text = "Finish game setup"
-            onboardingDetailLabel?.text = "UTP needs the original GOTY maps, music, sounds, and textures. Download the verified OldUnreal release or import files you already have."
+            let needsRecovery = UT99DataImportTransaction.hasInterruptedCommit(at: dataSupportRoot())
+            statusLabel.text = needsRecovery ? "Interrupted import · repair required" : "Game data required · download or import to continue"
+            onboardingTitleLabel?.text = needsRecovery ? "Repair game data" : "Finish game setup"
+            onboardingDetailLabel?.text = needsRecovery
+                ? "Existing files and recovery backups were retained. Use Get Game Data or Import Files below to install a verified replacement."
+                : "UTP needs the original GOTY maps, music, sounds, and textures. Download the verified OldUnreal release or import files you already have."
             onboardingPrimaryButton?.setTitle("GET GAME DATA", for: .normal)
             onboardingSecondaryButton?.setTitle("IMPORT FILES", for: .normal)
             onboardingTertiaryButton?.setTitle("Why game data is separate", for: .normal)
@@ -4253,6 +4257,13 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             NSLog("UT99 host blocked duplicate engine start state=%@", hostState.rawValue)
             return nil
         }
+        guard isGameDataReady() else {
+            transition(to: .needsData, reason: "engine launch blocked by incomplete data or recovery")
+            statusLabel.text = UT99DataImportTransaction.hasInterruptedCommit(at: dataSupportRoot())
+                ? UT99ImportRecoveryRequired().localizedDescription
+                : "Game data or runtime support is incomplete. Use Get Game Data to finish setup."
+            return nil
+        }
         let safeMode = requestedSafeMode || pendingSafeMode
         if safeMode { prepareSafeModePreferences() }
         let identity = appIdentity()
@@ -4527,6 +4538,16 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     private func prepareBundledData() {
+        let supportRoot = dataSupportRoot()
+        do {
+            try FileManager.default.createDirectory(at: supportRoot, withIntermediateDirectories: true)
+            if try UT99DataImportTransaction.recoverInterruptedCommit(at: supportRoot) {
+                NSLog("UT99 data import recovered an interrupted transaction before startup")
+            }
+        } catch {
+            NSLog("UT99 data import recovery requires repair: %@", error.localizedDescription)
+            return
+        }
         prepareBundledRuntimeShader()
         do {
             if try UT99RuntimeSupport.ensureV469eMarkerIfMatching(at: dataSupportRoot()) {
@@ -4536,13 +4557,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             NSLog("UT99 v469e runtime verification failed: %@", error.localizedDescription)
         }
         guard let bundledData = Bundle.main.url(forResource: "UT99Data", withExtension: nil) else { return }
-        let supportRoot = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Unreal Tournament", isDirectory: true)
         do {
-            try FileManager.default.createDirectory(at: supportRoot, withIntermediateDirectories: true)
-            if try UT99DataImportTransaction.recoverInterruptedCommit(at: supportRoot) {
-                NSLog("UT99 data import recovered an interrupted transaction before startup")
-            }
             // v2 re-syncs the System tree for engine packages. Earlier shell
             // builds could leave the v1 marker with maps but no INI/packages,
             // which makes the original entry fail its first config read.
@@ -4860,6 +4875,11 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         touchOverlay.isUserInteractionEnabled = true
         switch result {
         case let .success(imported):
+            guard isGameDataReady() else {
+                transition(to: .needsData, reason: "import completed but runtime support still needs repair")
+                statusLabel.text = "Imported \(imported) content files. Use Get Game Data to finish repairing runtime support."
+                return
+            }
             statusLabel.text = "Imported and verified \(imported) UT99 content files"
             transition(to: .ready, reason: "background transactional data import committed")
             if !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("-UT99") }) {
