@@ -4875,6 +4875,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         touchOverlay.isUserInteractionEnabled = true
         switch result {
         case let .success(imported):
+            if !UT99DataImportTransaction.hasInterruptedCommit(at: dataSupportRoot()) {
+                prepareBundledRuntimeShader()
+            }
             guard isGameDataReady() else {
                 transition(to: .needsData, reason: "import completed but runtime support still needs repair")
                 statusLabel.text = "Imported \(imported) content files. Use Get Game Data to finish repairing runtime support."
