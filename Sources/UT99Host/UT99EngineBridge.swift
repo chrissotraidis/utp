@@ -108,6 +108,7 @@ final class UT99EngineBridge {
     func startOriginalEntry(
         connectURL: String? = nil,
         safeMode: Bool = false,
+        canvas: UT99EngineCanvas? = nil,
         onExit: ((Int32) -> Void)? = nil
     ) -> ProbeResult {
         if handle == nil {
@@ -186,7 +187,8 @@ final class UT99EngineBridge {
         applyAppleGraphicsProfile(
             to: URL(fileURLWithPath: iniPath),
             safeTextures: safeTextures,
-            verticalSync: verticalSync
+            verticalSync: verticalSync,
+            canvas: canvas
         )
         applyAppleNetworkProfile(to: URL(fileURLWithPath: iniPath))
         if audioEnabled {
@@ -319,7 +321,12 @@ final class UT99EngineBridge {
               pointerScale)
     }
 
-    private func applyAppleGraphicsProfile(to iniURL: URL, safeTextures: Bool, verticalSync: Bool) {
+    private func applyAppleGraphicsProfile(
+        to iniURL: URL,
+        safeTextures: Bool,
+        verticalSync: Bool,
+        canvas: UT99EngineCanvas?
+    ) {
         guard var ini = try? String(contentsOf: iniURL, encoding: .utf8) else { return }
         // Retail Windows configs use CRLF while the v469e macOS templates use
         // LF. Normalize before section-aware rewrites so preserved user INIs
@@ -337,14 +344,12 @@ final class UT99EngineBridge {
         }
 
         // EctoPad composes controls over a full-bleed game surface. Publish
-        // the active landscape dimensions to Unreal instead of preserving the
-        // legacy 512x384 desktop request or carving out a black control bay.
-        // Values remain in points; Metal applies the native backing scale.
-        let screenSize = UIScreen.main.bounds.size
-        let shortEdge = max(1, floor(min(screenSize.width, screenSize.height)))
-        let longEdge = max(shortEdge, floor(max(screenSize.width, screenSize.height)))
-        let gameHeight = Int(shortEdge)
-        let gameWidth = Int(longEdge)
+        // the game window's landscape dimensions to Unreal instead of the
+        // legacy 512x384 desktop request or a black control bay. Without a
+        // measured window, keep the configured viewport unchanged. The
+        // renderer view follows later window resizes on the UIKit side.
+        let gameWidth = canvas?.width ?? 0
+        let gameHeight = canvas?.height ?? 0
         var section = ""
         let syncValue = verticalSync ? "True" : "False"
         ini = ini.components(separatedBy: "\n").map { line in
@@ -361,10 +366,12 @@ final class UT99EngineBridge {
                 }
             }
             if section == "[SDLDrv.SDLClient]" {
-                if line.hasPrefix("WindowedViewportX=") { return "WindowedViewportX=\(gameWidth)" }
-                if line.hasPrefix("WindowedViewportY=") { return "WindowedViewportY=\(gameHeight)" }
-                if line.hasPrefix("FullscreenViewportX=") { return "FullscreenViewportX=\(gameWidth)" }
-                if line.hasPrefix("FullscreenViewportY=") { return "FullscreenViewportY=\(gameHeight)" }
+                if canvas != nil {
+                    if line.hasPrefix("WindowedViewportX=") { return "WindowedViewportX=\(gameWidth)" }
+                    if line.hasPrefix("WindowedViewportY=") { return "WindowedViewportY=\(gameHeight)" }
+                    if line.hasPrefix("FullscreenViewportX=") { return "FullscreenViewportX=\(gameWidth)" }
+                    if line.hasPrefix("FullscreenViewportY=") { return "FullscreenViewportY=\(gameHeight)" }
+                }
             }
             if section == "[FruCoRe.FruCoReRenderDevice]" && line.hasPrefix("UseVSync=") {
                 return "UseVSync=\(syncValue)"
@@ -378,7 +385,7 @@ final class UT99EngineBridge {
                 with: frucoreSection + "\nUseS3TC=False\nUseCompression=False\nTexDXT1ToDXT3=True\nUse32BitTextures=True\n"
             )
         }
-        ini = seedAppleGUIScaleIfMissing(in: ini, backingScale: UIScreen.main.scale)
+        ini = seedAppleGUIScaleIfMissing(in: ini, backingScale: canvas?.backingScale ?? 1)
         try? ini.write(to: iniURL, atomically: true, encoding: .utf8)
         NSLog("UT99 applied Apple graphics profile: safeTextures=%@ vsync=%@ SDL full-bleed=%dx%d",
               safeTextures ? "true" : "false", verticalSync ? "true" : "false",
