@@ -1715,7 +1715,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     private func setTouchInputEnabled(_ enabled: Bool) {
         UserDefaults.standard.set(enabled, forKey: Self.touchInputEnabledKey)
-        if enabled && touchOverlay.touchConfiguration.autoHideForController {
+        if enabled && controllerAutoHideActive {
             // Show Touch Controls wins over the automatic controller hide and
             // keeps auto-hide off until the player turns it back on.
             var configuration = touchOverlay.touchConfiguration
