@@ -77,7 +77,25 @@ private enum TouchConfigurationTests {
         require(menuDrift.x == 0 && menuDrift.y == 0, "menu cursor resting drift was not suppressed")
         require(menuMove.x == 0.20 && menuMove.y == 0.03, "menu cursor deliberate movement changed")
 
-        print("UT99 touch configuration PASS persistence=true migration=true clamping=true deadZone=true acceleration=true invertY=true floatingCurve=true controllerCardinal=true")
+        // Auto-hide defaults on with nothing saved and follows the current
+        // controller state. Show keeps touch visible with the controller still
+        // connected, and stays in effect until auto-hide is turned back on.
+        let freshSuite = suiteName + "-autohide"
+        guard let fresh = UserDefaults(suiteName: freshSuite) else { fail("defaults suite unavailable") }
+        defer { fresh.removePersistentDomain(forName: freshSuite) }
+        var visibility = UT99TouchConfiguration.load(from: fresh)
+        require(visibility.autoHideForController, "auto-hide was not on by default")
+        require(visibility.controllerHidesTouch(extendedControllerConnected: true), "connected controller did not hide touch")
+        require(!visibility.controllerHidesTouch(extendedControllerConnected: false), "touch stayed hidden without a controller")
+        visibility.showTouchControls()
+        require(!visibility.controllerHidesTouch(extendedControllerConnected: true), "Show did not override the connected controller")
+        visibility.save(to: fresh)
+        visibility = UT99TouchConfiguration.load(from: fresh)
+        require(!visibility.controllerHidesTouch(extendedControllerConnected: true), "Show did not persist across relaunch")
+        visibility.autoHideForController = true
+        require(visibility.controllerHidesTouch(extendedControllerConnected: true), "re-enabling auto-hide did not apply immediately")
+
+        print("UT99 touch configuration PASS persistence=true migration=true clamping=true deadZone=true acceleration=true invertY=true floatingCurve=true controllerCardinal=true controllerAutoHide=true")
     }
 
     private static func require(_ condition: @autoclosure () -> Bool, _ message: String) {
