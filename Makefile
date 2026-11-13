@@ -147,3 +147,4 @@ test:
 	@./Tests/test_touch_configuration.sh
 	@./Tests/test_touch_profiles.sh
 	@./Tests/test_touch_layout_geometry.sh
+	@./Tests/test_display_geometry.sh

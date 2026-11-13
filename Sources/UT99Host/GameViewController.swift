@@ -4036,7 +4036,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             .appendingPathComponent("Unreal Tournament", isDirectory: true)
         var output = "UTP diagnostics\nGenerated: \(ISO8601DateFormatter().string(from: Date()))\nPrivacy: paths and common secret fields are redacted; review server addresses before sharing.\n\n\(diagnosticsSummary())\n"
         let metrics = engineBridge.rendererMetrics()
-        output += "\nDisplay points: \(UIScreen.main.bounds.width)x\(UIScreen.main.bounds.height) @\(UIScreen.main.scale)\n"
+        let windowSize = view.window?.bounds.size ?? view.bounds.size
+        output += "\nGame window points: \(windowSize.width)x\(windowSize.height) @\(traitCollection.displayScale)\n"
         output += String(format: "FruCoRe presentation: frames=%llu avgFPS=%.2f onePercentLowFPS=%.2f frameMS=%.3f drawable=%llux%llu\n",
                          metrics.frameCount, metrics.averageFPS, metrics.onePercentLowFPS,
                          metrics.averageFrameTimeMS, metrics.drawableWidth, metrics.drawableHeight)
@@ -4291,7 +4292,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             hasPresentedMenuSmokeState = true
             showTouchSettings()
         }
-        let result = engineBridge.startOriginalEntry(connectURL: connectURL, safeMode: safeMode) { [weak self] exitCode in
+        // Size the engine from the window that hosts the game, not the main
+        // screen: the scene can live on another display or in a resized window.
+        let engineCanvas = UT99DisplayGeometry.engineCanvas(
+            windowSize: view.window?.bounds.size ?? view.bounds.size,
+            backingScale: traitCollection.displayScale
+        )
+        let result = engineBridge.startOriginalEntry(
+            connectURL: connectURL, safeMode: safeMode, canvas: engineCanvas
+        ) { [weak self] exitCode in
             self?.engineDidExit(exitCode)
         }
         // UT owns the main thread after entry, so a deferred UIKit/SDL-window
