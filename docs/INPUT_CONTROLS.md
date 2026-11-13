@@ -25,12 +25,14 @@ the request and restores the ordinary iPadOS pointer. The system can deny lock
 outside a full-screen foreground scene, so requested and granted state are
 recorded separately in diagnostics.
 
-Connecting an extended controller auto-hides touch controls once when the
-saved controller-auto-hide preference is enabled. A later explicit **Show
-Touch Controls** overrides that transient hide even while the controller
-remains connected. Disconnecting clears the transient controller hide; it
-does not rewrite the player's saved touch-enabled preference. A fresh launch
-with no detected controller restores touch controls as the safe input baseline.
+While an extended controller is connected, touch controls hide when the saved
+**Auto-hide Touch Controls with Controller** preference is on (the default).
+Changing that preference applies immediately. **Show Touch Controls** brings
+touch back while the controller remains connected and turns auto-hide off
+until the player turns it on again. A menu-only responder controller never
+hides touch. Disconnecting shows touch again; it does not rewrite the player's
+saved touch-enabled preference. A fresh launch with no detected controller
+restores touch controls as the safe input baseline.
 
 | Input | UWindow menu | Gameplay |
 | --- | --- | --- |

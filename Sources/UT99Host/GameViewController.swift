@@ -214,6 +214,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var hostMenuPanel: UIVisualEffectView?
     private var supportExportNotice: String?
     private var touchSettingsPanel: UIView?
+    private weak var touchEnabledSwitch: UISwitch?
+    private weak var touchAutoHideSwitch: UISwitch?
     private weak var touchOpacitySlider: UISlider?
     private weak var touchScaleSlider: UISlider?
     private let engineBridge = UT99EngineBridge()
@@ -247,7 +249,6 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var configuredControllerIDs: Set<ObjectIdentifier> = []
     private let configuredControllerLock = NSLock()
     private var controllerAutoHideActive = false
-    private var wasExtendedControllerConnected = false
     private var controllerFallbackConnected = false
     private var attemptedHotControllerDiscovery = false
     private var controllerDiscoveryGeneration = 0
@@ -1676,12 +1677,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         #endif
         let engineActive = hostState == .startingEngine || hostState == .running || hostState == .pausedBySystem
         let configuration = UT99TouchConfiguration.load()
-        if extendedControllerConnected && !wasExtendedControllerConnected && configuration.autoHideForController {
-            controllerAutoHideActive = true
-        } else if !extendedControllerConnected {
-            controllerAutoHideActive = false
-        }
-        wasExtendedControllerConnected = extendedControllerConnected
+        controllerAutoHideActive = configuration.controllerHidesTouch(
+            extendedControllerConnected: extendedControllerConnected)
         let touchEnabled = isTouchInputEnabled
         let shouldHide = !engineActive || !touchEnabled || controllerAutoHideActive
         if shouldHide && touchInputWasVisible {
@@ -1699,6 +1696,8 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // This transparent surface is also the hardware mouse/trackpad bridge
         // in gameplay, so it must remain active even when touch controls show.
         gameSurfaceInputView.isUserInteractionEnabled = engineActive
+        touchEnabledSwitch?.isOn = touchEnabled && !controllerAutoHideActive
+        touchAutoHideSwitch?.isOn = configuration.autoHideForController
         NSLog("UT99 touch overlay %@ enabled=%@ extendedController=%@ responderFallback=%@ autoHide=%@ autoHideActive=%@ pointerMode=%@ pointerSurface=%@",
               shouldHide ? "hidden" : "visible",
               touchEnabled ? "true" : "false",
@@ -1716,10 +1715,12 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
     private func setTouchInputEnabled(_ enabled: Bool) {
         UserDefaults.standard.set(enabled, forKey: Self.touchInputEnabledKey)
-        if enabled {
-            // A deliberate Turn On wins over the automatic controller hide.
-            // The next disconnect/reconnect may auto-hide again.
-            controllerAutoHideActive = false
+        if enabled && controllerAutoHideActive {
+            // Show Touch Controls wins over the automatic controller hide and
+            // keeps auto-hide off until the player turns it back on.
+            var configuration = touchOverlay.touchConfiguration
+            configuration.showTouchControls()
+            touchOverlay.setTouchConfiguration(configuration)
         }
         updateTouchVisibility()
         refreshHostMenu()
@@ -3129,12 +3130,9 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
                 self?.showControlsInfo()
             })
         }
-        let autoHideTitle = "Hide touch for controller: " + (currentConfiguration.autoHideForController ? "On" : "Off")
+        let autoHideTitle = "Auto-hide Touch Controls with Controller: " + (currentConfiguration.autoHideForController ? "On" : "Off")
         alert.addAction(UIAlertAction(title: autoHideTitle, style: .default) { [weak self] _ in
-            var configuration = self?.touchOverlay.touchConfiguration ?? .standard
-            configuration.autoHideForController.toggle()
-            self?.touchOverlay.setTouchConfiguration(configuration)
-            self?.updateTouchVisibility()
+            self?.setTouchAutoHide(!currentConfiguration.autoHideForController)
             self?.showControlsInfo()
         })
         alert.addAction(UIAlertAction(title: "Done", style: .cancel))
@@ -3267,13 +3265,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
 
         let hideForController = UISwitch()
         hideForController.isOn = touchOverlay.touchConfiguration.autoHideForController
-        hideForController.accessibilityLabel = "Hide touch controls when controller connected"
+        hideForController.accessibilityLabel = "Auto-hide Touch Controls with Controller"
         hideForController.addTarget(self, action: #selector(touchAutoHideChanged(_:)), for: .valueChanged)
+        touchAutoHideSwitch = hideForController
 
         let touchEnabled = UISwitch()
-        touchEnabled.isOn = isTouchInputEnabled
+        touchEnabled.isOn = isTouchInputEnabled && !controllerAutoHideActive
         touchEnabled.accessibilityLabel = "Touch controls enabled"
         touchEnabled.addTarget(self, action: #selector(touchEnabledChanged(_:)), for: .valueChanged)
+        touchEnabledSwitch = touchEnabled
 
         let edit = touchSettingsButton("Arrange Controls", symbol: "move.3d", selector: #selector(editTouchLayoutFromSettings))
         let saved = touchSettingsButton("Saved Layouts", symbol: "square.and.arrow.down", selector: #selector(showNamedTouchProfilesFromSettings))
@@ -3291,7 +3291,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             touchSettingsRow(title: "Opacity", control: opacity),
             touchSettingsRow(title: "Size", control: size),
             touchSettingsRow(title: "Left-handed", control: leftHanded),
-            touchSettingsRow(title: "Hide with controller", control: hideForController),
+            touchSettingsRow(title: "Auto-hide with controller", control: hideForController),
             edit,
             saved,
             reset,
@@ -3436,10 +3436,15 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     }
 
     @objc private func touchAutoHideChanged(_ sender: UISwitch) {
+        setTouchAutoHide(sender.isOn)
+    }
+
+    private func setTouchAutoHide(_ enabled: Bool) {
         var configuration = touchOverlay.touchConfiguration
-        configuration.autoHideForController = sender.isOn
+        configuration.autoHideForController = enabled
         touchOverlay.setTouchConfiguration(configuration)
         updateTouchVisibility()
+        refreshHostMenu()
     }
 
     @objc private func touchEnabledChanged(_ sender: UISwitch) {
@@ -3731,7 +3736,7 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
         // Editing is a temporary presentation state, not an input-mode
         // change. Preserve menu/gameplay mode so SELECT and BACK can be edited
         // independently from FIRE and GAME MENU.
-        if !isTouchInputEnabled {
+        if !isTouchInputEnabled || controllerAutoHideActive {
             setTouchInputEnabled(true)
         }
         touchOverlay.setMenuInteractionActive(originalMenuInputActive)

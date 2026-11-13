@@ -62,7 +62,7 @@ final result: passed
 - **Spacing and layout rhythm:** The renderer remains full bleed. Movement, utility, aim, and action zones have distinct thumb territories; the only overlap retained is the deliberate EctoPad-style face hierarchy in the combat cluster. The old wide NEXT control no longer crosses the screen or settings panel.
 - **Colors and visual tokens:** The source hierarchy is preserved through dark neutral movement, yellow aim, green FIRE, red ALT, light tertiary actions, white rims, and the dark native host/settings surfaces. Contrast remains readable against both the host gradient and live Deck16 frames.
 - **Image and icon fidelity:** Gameplay is the real FruCoRe/Metal-rendered engine frame. UIKit controls use supplied SF Symbols where an icon is appropriate; no screenshot slices, placeholder art, emoji, handcrafted SVG, or simulated game imagery replace visible source assets.
-- **Copy and content:** The settings panel now uses direct player language: `Opacity`, `Size`, `Left-handed`, `Hide with controller`, `Arrange Controls`, `Saved Layouts`, and `Restore Default Layout`. UT actions use UT semantics—FIRE, ALT, JUMP, DUCK, SCORE, PREV, NEXT, USE, and MENU—and no player-facing settings/profile error copy exposes the reference implementation name.
+- **Copy and content:** The settings panel now uses direct player language: `Opacity`, `Size`, `Left-handed`, `Auto-hide with controller`, `Arrange Controls`, `Saved Layouts`, and `Restore Default Layout`. UT actions use UT semantics—FIRE, ALT, JUMP, DUCK, SCORE, PREV, NEXT, USE, and MENU—and no player-facing settings/profile error copy exposes the reference implementation name.
 
 ## Interaction evidence
 

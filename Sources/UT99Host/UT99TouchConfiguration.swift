@@ -39,6 +39,18 @@ struct UT99TouchConfiguration: Codable, Equatable {
         autoHideForController: true
     )
 
+    /// Only a real extended gamepad hides touch, and only while auto-hide is on.
+    /// Evaluated on every visibility update, so preference changes apply at once.
+    func controllerHidesTouch(extendedControllerConnected: Bool) -> Bool {
+        autoHideForController && extendedControllerConnected
+    }
+
+    /// Show Touch Controls wins over a connected controller and keeps
+    /// auto-hide off until the player turns it back on.
+    mutating func showTouchControls() {
+        autoHideForController = false
+    }
+
     func sanitized() -> UT99TouchConfiguration {
         UT99TouchConfiguration(
             leftHanded: leftHanded,
