@@ -2624,16 +2624,10 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
             self?.togglePointerCaptureEnabled()
         }
 
-        let touchVisible = isTouchInputEnabled && !controllerAutoHideActive
-        let autoHideForController = touchOverlay.touchConfiguration.autoHideForController
         let touchMenu = UIMenu(title: "Touch Controls", image: UIImage(systemName: "hand.draw"), children: [
-            action(touchVisible ? "Hide Touch Controls" : "Show Touch Controls",
-                   symbol: touchVisible ? "hand.raised.slash" : "hand.raised.fill") { [weak self] in
-                self?.setTouchInputEnabled(!touchVisible)
-            },
-            action("Auto-hide Touch Controls with Controller", symbol: "gamecontroller",
-                   state: autoHideForController ? .on : .off) { [weak self] in
-                self?.setTouchAutoHide(!autoHideForController)
+            action(isTouchInputEnabled ? "Turn Touch Controls Off" : "Turn Touch Controls On",
+                   symbol: isTouchInputEnabled ? "hand.raised.slash" : "hand.raised.fill") { [weak self] in
+                self?.toggleTouchInputEnabled()
             },
             action("Touch Controls…", symbol: "slider.horizontal.3") { [weak self] in
                 self?.showTouchSettings()
