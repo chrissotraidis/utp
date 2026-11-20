@@ -1,5 +1,19 @@
 # Known issues and technical debt
 
+## TV (extended display) findings — 2026-11-20
+
+- **Trackpad cursor does not line up with UWindow's cursor in Menu mode.** On a
+  1280×720 TV the iPadOS pointer and the game's software cursor sit in visibly
+  different places. The host passes the hover point through unchanged
+  (`UT99PointerBridge host=… state=…` match; window, drawable and renderer are
+  all 1280×720 at scale 2; ConfiguredGUIScale 3, the same as on the iPad), so
+  the offset comes from how SDLDrv's absolute-to-relative correction meets
+  UWindow's cursor. Clicks still land where the system pointer is. Switching to
+  the controller (Select) works. Needs a trackpad session with the pointer log on.
+- **Black polygon shadows** (FruCoRe) remain on the TV exactly as on the iPad:
+  large dark quads under players and corpses (photo in the 20 November TV test).
+- Gameplay is a little less smooth on the TV than on the iPad's own screen.
+
 ## Launch-thread feedback reconciliation — 2026-08-30
 
 The actionable requests and defects raised in the launch thread are classified
