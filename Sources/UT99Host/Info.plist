@@ -7,8 +7,8 @@
 	<key>CFBundleIdentifier</key><string>com.ut99apple.client</string>
 	<key>CFBundleName</key><string>UTP</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.1.3</string>
-	<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleShortVersionString</key><string>0.1.4</string>
+	<key>CFBundleVersion</key><string>7</string>
 	<key>LSRequiresIPhoneOS</key><true/>
 	<key>GCSupportsControllerUserInteraction</key><true/>
 	<key>GCSupportedGameControllers</key>
@@ -36,6 +36,8 @@
 	<key>NSLocalNetworkUsageDescription</key><string>UT99 uses the local network for LAN games and direct server connections.</string>
 	<key>GCSupportsMultipleMicroGamepads</key><true/>
 	<key>UIRequiresFullScreen</key><true/>
+	<key>UIRequiresFullScreenIgnoredStartingWithVersion</key>
+	<string>26</string>
 	<!-- A modern launch-screen declaration is required for native iPad and
 	     iPhone scene dimensions. Without it iOS may expose the legacy
 	     1024x768 compatibility canvas before SDL creates its Metal surface. -->
@@ -44,6 +46,12 @@
 	<dict><key>UIApplicationSupportsMultipleScenes</key><false/><key>UISceneConfigurations</key><dict><key>UIWindowSceneSessionRoleApplication</key><array><dict><key>UISceneConfigurationName</key><string>Default Configuration</string><key>UISceneDelegateClassName</key><string>$(PRODUCT_MODULE_NAME).SceneDelegate</string></dict></array></dict></dict>
 	<key>UIInterfaceOrientation</key><string>UIInterfaceOrientationLandscapeLeft</string>
 	<key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
-	<key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+<string>UIInterfaceOrientationPortrait</string>
+<string>UIInterfaceOrientationPortraitUpsideDown</string>
+<string>UIInterfaceOrientationLandscapeLeft</string>
+<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 </dict>
 </plist>

@@ -317,8 +317,10 @@ final class GameViewController: GCEventViewController, MTKViewDelegate, UIDocume
     private var hostState: HostState = .ready
 
     override var prefersStatusBarHidden: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
-    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation { .landscapeLeft }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { traitCollection.userInterfaceIdiom == .pad ? .all : .landscape }
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        traitCollection.userInterfaceIdiom == .pad ? super.preferredInterfaceOrientationForPresentation : .landscapeLeft
+    }
     override var shouldAutorotate: Bool { true }
     override var canBecomeFirstResponder: Bool { true }
     override var prefersPointerLocked: Bool { shouldRequestPointerCapture }

@@ -177,14 +177,14 @@ index 31b114a..ab32514 100644
  {
 -    /* If YES, the launch image will be incorrectly rotated in some cases. */
 -    return NO;
-+    /* The host scene is landscape-only. Returning NO prevents the SDL child
-+     * window from following the scene geometry request on modern iPadOS. */
++    /* Let the SDL window follow the host scene geometry. */
++    /* iPad supports portrait and landscape; iPhone stays landscape. */
 +    return YES;
 +}
 +
 +- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation
 +{
-+    return UIInterfaceOrientationLandscapeLeft;
++    return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad ? [super preferredInterfaceOrientationForPresentation] : UIInterfaceOrientationLandscapeLeft;
  }
  
  - (NSUInteger)supportedInterfaceOrientations
@@ -433,7 +433,7 @@ index 0e0ea05..3f5b4af 100644
 +                        [uiwindow.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
 +                        [uiwindow.windowScene requestGeometryUpdateWithPreferences:
 +                            [[UIWindowSceneGeometryPreferencesIOS alloc]
-+                                initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscapeRight]
++                                initWithInterfaceOrientations:(UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskLandscapeRight)]
 +                            errorHandler:^(NSError *error) {
 +                                SDL_Log("SDL UIKit landscape geometry request failed: %s", error.localizedDescription.UTF8String);
 +                            }];
